@@ -14,6 +14,8 @@ import {
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { format, getDay, setHours, setMinutes, isBefore, addMinutes } from "date-fns";
+import { collection, addDoc } from "firebase/firestore";
+import { db } from "../firebase";
 
 export default function BookingForm() {
   const [formData, setFormData] = useState({
@@ -48,24 +50,43 @@ export default function BookingForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-
-    // Convert time to 12-hour format
+  
     const formattedTime = formData.time || "";
-
-    console.log("Booking Details:", formData);
-    toast({
-      title: "Appointment booked!",
-      description: `You have booked ${formData.service} on ${format(formData.date, "MMMM dd, yyyy")} at ${formattedTime}.`,
-      status: "success",
-      duration: 4000,
-      isClosable: true,
-    });
-
-    setFormData({ service: "", name: "", email: "", phone: "", date: null, time: null });
-    setErrors({});
+  
+    try {
+      await addDoc(collection(db, "bookings"), {
+        service: formData.service,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone || "",
+        date: formData.date ? formData.date.toISOString() : "",
+        time: formattedTime,
+        createdAt: new Date(),
+      });
+  
+      toast({
+        title: "Appointment booked!",
+        description: `You have booked ${formData.service} on ${format(formData.date, "MMMM dd, yyyy")} at ${formattedTime}.`,
+        status: "success",
+        duration: 4000,
+        isClosable: true,
+      });
+  
+      setFormData({ service: "", name: "", email: "", phone: "", date: null, time: null });
+      setErrors({});
+    } catch (error) {
+      console.error("Error adding document: ", error);
+      toast({
+        title: "Error",
+        description: "Failed to book appointment. Please try again.",
+        status: "error",
+        duration: 4000,
+        isClosable: true,
+      });
+    }
   };
 
    // Disable weekends in the Date Picker
