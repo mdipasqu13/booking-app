@@ -11,6 +11,9 @@ import {
   Text,
   useToast,
 } from "@chakra-ui/react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { format } from "date-fns";
 
 export default function BookingForm() {
   const [formData, setFormData] = useState({
@@ -18,8 +21,8 @@ export default function BookingForm() {
     name: "",
     email: "",
     phone: "",
-    date: "",
-    time: "",
+    date: null, // Changed from "" to null
+    time: null, // Changed from "" to null
   });
 
   const [errors, setErrors] = useState({});
@@ -45,31 +48,23 @@ export default function BookingForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-  
-    // Convert time from 24-hour to 12-hour format
-    const [hour, minute] = formData.time.split(":");
-    const hourInt = parseInt(hour, 10);
-    const ampm = hourInt >= 12 ? "PM" : "AM";
-    const formattedHour = hourInt % 12 === 0 ? 12 : hourInt % 12; // Convert 0 to 12 for midnight, 12 stays 12
-    const formattedTime = `${formattedHour}:${minute} ${ampm}`;
-  
+
+    // Convert time to 12-hour format
+    const formattedTime = formData.time ? format(formData.time, "hh:mm a") : "";
+
     console.log("Booking Details:", formData);
     toast({
       title: "Appointment booked!",
-      description: `You have booked ${formData.service} on ${formData.date} at ${formattedTime}.`,
+      description: `You have booked ${formData.service} on ${format(formData.date, "MMMM dd, yyyy")} at ${formattedTime}.`,
       status: "success",
       duration: 4000,
       isClosable: true,
     });
-  
-    setFormData({ service: "", name: "", email: "", phone: "", date: "", time: "" });
+
+    setFormData({ service: "", name: "", email: "", phone: "", date: null, time: null });
     setErrors({});
   };
 
@@ -83,7 +78,7 @@ export default function BookingForm() {
           {/* Service Selection */}
           <FormControl isRequired isInvalid={errors.service}>
             <FormLabel>Select a Service</FormLabel>
-            <Select name="service" value={formData.service} onChange={handleChange}>
+            <Select name="service" value={formData.service} onChange={(e) => setFormData({ ...formData, service: e.target.value })}>
               <option value="">Select...</option>
               <option value="web-design">Web Design</option>
               <option value="seo-consulting">Consulting</option>
@@ -95,35 +90,52 @@ export default function BookingForm() {
           {/* Name */}
           <FormControl isRequired isInvalid={errors.name}>
             <FormLabel>Full Name</FormLabel>
-            <Input type="text" name="name" value={formData.name} onChange={handleChange} />
+            <Input type="text" name="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
             {errors.name && <Text color="red.500">{errors.name}</Text>}
           </FormControl>
 
           {/* Email */}
           <FormControl isRequired isInvalid={errors.email}>
             <FormLabel>Email</FormLabel>
-            <Input type="email" name="email" value={formData.email} onChange={handleChange} />
+            <Input type="email" name="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
             {errors.email && <Text color="red.500">{errors.email}</Text>}
           </FormControl>
 
           {/* Phone */}
           <FormControl isInvalid={errors.phone}>
             <FormLabel>Phone (Optional)</FormLabel>
-            <Input type="tel" name="phone" value={formData.phone} onChange={handleChange} />
+            <Input type="tel" name="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
             {errors.phone && <Text color="red.500">{errors.phone}</Text>}
           </FormControl>
 
-          {/* Date */}
+          {/* Date Picker */}
           <FormControl isRequired isInvalid={errors.date}>
             <FormLabel>Select a Date</FormLabel>
-            <Input type="date" name="date" value={formData.date} onChange={handleChange} />
+            <DatePicker
+              selected={formData.date}
+              onChange={(date) => setFormData({ ...formData, date })}
+              dateFormat="MMMM d, yyyy"
+              minDate={new Date()} // Prevent past dates
+              placeholderText="Click to select a date"
+              className="chakra-input"
+            />
             {errors.date && <Text color="red.500">{errors.date}</Text>}
           </FormControl>
 
-          {/* Time */}
+          {/* Time Picker */}
           <FormControl isRequired isInvalid={errors.time}>
             <FormLabel>Select a Time</FormLabel>
-            <Input type="time" name="time" value={formData.time} onChange={handleChange} />
+            <DatePicker
+              selected={formData.time}
+              onChange={(time) => setFormData({ ...formData, time })}
+              showTimeSelect
+              showTimeSelectOnly
+              timeIntervals={30}
+              timeCaption="Time"
+              dateFormat="h:mm aa"
+              placeholderText="Click to select a time"
+              className="chakra-input"
+            />
             {errors.time && <Text color="red.500">{errors.time}</Text>}
           </FormControl>
 
