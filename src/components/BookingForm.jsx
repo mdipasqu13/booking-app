@@ -13,7 +13,7 @@ import {
 } from "@chakra-ui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { format } from "date-fns";
+import { format, getDay, setHours, setMinutes, isBefore, addMinutes } from "date-fns";
 
 export default function BookingForm() {
   const [formData, setFormData] = useState({
@@ -21,8 +21,8 @@ export default function BookingForm() {
     name: "",
     email: "",
     phone: "",
-    date: null, // Changed from "" to null
-    time: null, // Changed from "" to null
+    date: null, 
+    time: null, 
   });
 
   const [errors, setErrors] = useState({});
@@ -53,7 +53,7 @@ export default function BookingForm() {
     if (!validateForm()) return;
 
     // Convert time to 12-hour format
-    const formattedTime = formData.time ? format(formData.time, "hh:mm a") : "";
+    const formattedTime = formData.time || "";
 
     console.log("Booking Details:", formData);
     toast({
@@ -66,6 +66,26 @@ export default function BookingForm() {
 
     setFormData({ service: "", name: "", email: "", phone: "", date: null, time: null });
     setErrors({});
+  };
+
+   // Disable weekends in the Date Picker
+   const isWeekday = (date) => {
+    const day = getDay(date);
+    return day !== 0 && day !== 6; // Disables Saturday (6) & Sunday (0)
+  };
+
+  // Generate available time slots (9:00 AM - 5:00 PM, every 30 minutes)
+  const generateTimeSlots = () => {
+    let times = [];
+    let startTime = setHours(setMinutes(new Date(), 0), 9); // Start at 9:00 AM
+    let endTime = setHours(setMinutes(new Date(), 0), 17); // End at 5:00 PM
+
+    while (isBefore(startTime, endTime)) {
+      times.push(startTime);
+      startTime = addMinutes(startTime, 30); // Increment by 30 minutes
+    }
+
+    return times;
   };
 
   return (
@@ -108,36 +128,38 @@ export default function BookingForm() {
             {errors.phone && <Text color="red.500">{errors.phone}</Text>}
           </FormControl>
 
-          {/* Date Picker */}
-          <FormControl isRequired isInvalid={errors.date}>
+           {/* Date Picker (Disable Weekends) */}
+           <FormControl isRequired isInvalid={errors.date}>
             <FormLabel>Select a Date</FormLabel>
             <DatePicker
               selected={formData.date}
               onChange={(date) => setFormData({ ...formData, date })}
               dateFormat="MMMM d, yyyy"
               minDate={new Date()} // Prevent past dates
+              filterDate={isWeekday} // Disable weekends
               placeholderText="Click to select a date"
               className="chakra-input"
             />
             {errors.date && <Text color="red.500">{errors.date}</Text>}
           </FormControl>
 
-          {/* Time Picker */}
-          <FormControl isRequired isInvalid={errors.time}>
+         {/* Time Picker (Business Hours Only) */}
+         <FormControl isRequired isInvalid={errors.time}>
             <FormLabel>Select a Time</FormLabel>
-            <DatePicker
-              selected={formData.time}
-              onChange={(time) => setFormData({ ...formData, time })}
-              showTimeSelect
-              showTimeSelectOnly
-              timeIntervals={30}
-              timeCaption="Time"
-              dateFormat="h:mm aa"
-              placeholderText="Click to select a time"
-              className="chakra-input"
-            />
+            <Select
+                name="time"
+                value={formData.time || ""}
+                onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+            >
+                <option value="">Select a time...</option>
+                {generateTimeSlots().map((time, index) => (
+                    <option key={index} value={format(time, "h:mm a")}>
+                    {format(time, "h:mm a")}
+                    </option>
+                ))}
+            </Select>
             {errors.time && <Text color="red.500">{errors.time}</Text>}
-          </FormControl>
+        </FormControl>
 
           {/* Submit Button */}
           <Button type="submit" colorScheme="blue" width="full">
