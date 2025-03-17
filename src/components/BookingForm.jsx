@@ -54,7 +54,13 @@ export default function BookingForm() {
     e.preventDefault();
     if (!validateForm()) return;
   
-    const formattedTime = formData.time || "";
+    console.log("Selected Time Before Formatting:", formData.time); // Debugging Step
+  
+    const formattedTime = formData.time && !isNaN(new Date(formData.time))
+      ? format(new Date(formData.time), "hh:mm a")
+      : "Invalid Time";
+  
+    console.log("Formatted Time:", formattedTime); // Another Debugging Step
   
     try {
       await addDoc(collection(db, "bookings"), {
@@ -62,7 +68,7 @@ export default function BookingForm() {
         name: formData.name,
         email: formData.email,
         phone: formData.phone || "",
-        date: formData.date ? formData.date.toISOString() : "",
+        date: format(formData.date, "yyyy-MM-dd"),
         time: formattedTime,
         createdAt: new Date(),
       });
@@ -78,17 +84,16 @@ export default function BookingForm() {
       setFormData({ service: "", name: "", email: "", phone: "", date: null, time: null });
       setErrors({});
     } catch (error) {
-      console.error("Error adding document: ", error);
+      console.error("Error booking appointment:", error);
       toast({
         title: "Error",
-        description: "Failed to book appointment. Please try again.",
+        description: "Something went wrong. Please try again later.",
         status: "error",
         duration: 4000,
         isClosable: true,
       });
     }
   };
-
    // Disable weekends in the Date Picker
    const isWeekday = (date) => {
     const day = getDay(date);
@@ -169,13 +174,22 @@ export default function BookingForm() {
             <FormLabel>Select a Time</FormLabel>
             <Select
                 name="time"
-                value={formData.time || ""}
-                onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                value={formData.time ? format(formData.time, "h:mm a") : ""}
+                onChange={(e) => {
+                    const selectedTimeString = e.target.value; // e.g. "9:30 AM"
+                    const matchedTime = generateTimeSlots().find(
+                        (time) => format(time, "h:mm a") === selectedTimeString
+                    );
+
+                    if (matchedTime) {
+                        setFormData({ ...formData, time: matchedTime });
+                    }
+                }}
             >
                 <option value="">Select a time...</option>
                 {generateTimeSlots().map((time, index) => (
                     <option key={index} value={format(time, "h:mm a")}>
-                    {format(time, "h:mm a")}
+                        {format(time, "h:mm a")}
                     </option>
                 ))}
             </Select>
