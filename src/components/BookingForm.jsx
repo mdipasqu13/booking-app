@@ -9,13 +9,14 @@ import {
   Button,
   VStack,
   Text,
+  Textarea,
   useToast,
 } from "@chakra-ui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { format, getDay, setHours, setMinutes, isBefore, addMinutes } from "date-fns";
-import { collection, addDoc } from "../firebase"; 
-import { db } from "../firebase"; 
+import { collection, addDoc } from "firebase/firestore";
+import { db } from "../firebase";
 
 export default function BookingForm() {
   const [formData, setFormData] = useState({
@@ -25,6 +26,7 @@ export default function BookingForm() {
     phone: "",
     date: null, 
     time: null, 
+    notes: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -53,25 +55,21 @@ export default function BookingForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-  
-    try {
-      // Convert time to formatted string
-      const formattedTime = formData.time ? format(formData.time, "hh:mm a") : "";
 
-      // Store the booking in Firestore
-      const bookingRef = await addDoc(collection(db, "bookings"), {
+    const formattedTime = formData.time ? format(formData.time, "hh:mm a") : "Invalid Time";
+
+    try {
+      await addDoc(collection(db, "bookings"), {
         service: formData.service,
         name: formData.name,
         email: formData.email,
         phone: formData.phone || "",
-        date: formData.date ? format(formData.date, "yyyy-MM-dd") : null,
+        date: format(formData.date, "yyyy-MM-dd"),
         time: formattedTime,
-        timestamp: new Date(),
+        notes: formData.notes,  // Store additional notes
+        createdAt: new Date(),
       });
 
-      console.log("Booking stored with ID:", bookingRef.id);
-
-      // Show success message
       toast({
         title: "Appointment booked!",
         description: `You have booked ${formData.service} on ${format(formData.date, "MMMM dd, yyyy")} at ${formattedTime}.`,
@@ -80,14 +78,13 @@ export default function BookingForm() {
         isClosable: true,
       });
 
-      // Reset form
-      setFormData({ service: "", name: "", email: "", phone: "", date: null, time: null });
+      setFormData({ service: "", name: "", email: "", phone: "", date: null, time: null, notes: "" });
       setErrors({});
     } catch (error) {
       console.error("Error booking appointment:", error);
       toast({
         title: "Error",
-        description: "Something went wrong. Please try again.",
+        description: "Something went wrong. Please try again later.",
         status: "error",
         duration: 4000,
         isClosable: true,
@@ -95,21 +92,19 @@ export default function BookingForm() {
     }
   };
 
-   // Disable weekends in the Date Picker
-   const isWeekday = (date) => {
+  const isWeekday = (date) => {
     const day = getDay(date);
-    return day !== 0 && day !== 6; // Disables Saturday (6) & Sunday (0)
+    return day !== 0 && day !== 6;
   };
 
-  // Generate available time slots (9:00 AM - 5:00 PM, every 30 minutes)
   const generateTimeSlots = () => {
     let times = [];
-    let startTime = setHours(setMinutes(new Date(), 0), 9); // Start at 9:00 AM
-    let endTime = setHours(setMinutes(new Date(), 0), 17); // End at 5:00 PM
+    let startTime = setHours(setMinutes(new Date(), 0), 9);
+    let endTime = setHours(setMinutes(new Date(), 0), 17);
 
     while (isBefore(startTime, endTime)) {
       times.push(startTime);
-      startTime = addMinutes(startTime, 30); // Increment by 30 minutes
+      startTime = addMinutes(startTime, 30);
     }
 
     return times;
@@ -122,7 +117,6 @@ export default function BookingForm() {
       </Heading>
       <form onSubmit={handleSubmit}>
         <VStack spacing={4}>
-          {/* Service Selection */}
           <FormControl isRequired isInvalid={errors.service}>
             <FormLabel>Select a Service</FormLabel>
             <Select name="service" value={formData.service} onChange={(e) => setFormData({ ...formData, service: e.target.value })}>
@@ -134,70 +128,74 @@ export default function BookingForm() {
             {errors.service && <Text color="red.500">{errors.service}</Text>}
           </FormControl>
 
-          {/* Name */}
           <FormControl isRequired isInvalid={errors.name}>
             <FormLabel>Full Name</FormLabel>
             <Input type="text" name="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
             {errors.name && <Text color="red.500">{errors.name}</Text>}
           </FormControl>
 
-          {/* Email */}
           <FormControl isRequired isInvalid={errors.email}>
             <FormLabel>Email</FormLabel>
             <Input type="email" name="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
             {errors.email && <Text color="red.500">{errors.email}</Text>}
           </FormControl>
 
-          {/* Phone */}
           <FormControl isInvalid={errors.phone}>
             <FormLabel>Phone (Optional)</FormLabel>
             <Input type="tel" name="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
             {errors.phone && <Text color="red.500">{errors.phone}</Text>}
           </FormControl>
 
-           {/* Date Picker (Disable Weekends) */}
-           <FormControl isRequired isInvalid={errors.date}>
+          <FormControl isRequired isInvalid={errors.date}>
             <FormLabel>Select a Date</FormLabel>
             <DatePicker
               selected={formData.date}
               onChange={(date) => setFormData({ ...formData, date })}
               dateFormat="MMMM d, yyyy"
-              minDate={new Date()} // Prevent past dates
-              filterDate={isWeekday} // Disable weekends
+              minDate={new Date()}
+              filterDate={isWeekday}
               placeholderText="Click to select a date"
               className="chakra-input"
             />
             {errors.date && <Text color="red.500">{errors.date}</Text>}
           </FormControl>
 
-         {/* Time Picker (Business Hours Only) */}
-         <FormControl isRequired isInvalid={errors.time}>
+          <FormControl isRequired isInvalid={errors.time}>
             <FormLabel>Select a Time</FormLabel>
             <Select
-                name="time"
-                value={formData.time ? format(formData.time, "h:mm a") : ""}
-                onChange={(e) => {
-                    const selectedTimeString = e.target.value; // e.g. "9:30 AM"
-                    const matchedTime = generateTimeSlots().find(
-                        (time) => format(time, "h:mm a") === selectedTimeString
-                    );
+              name="time"
+              value={formData.time ? format(formData.time, "h:mm a") : ""}
+              onChange={(e) => {
+                const selectedTimeString = e.target.value;
+                const matchedTime = generateTimeSlots().find(
+                  (time) => format(time, "h:mm a") === selectedTimeString
+                );
 
-                    if (matchedTime) {
-                        setFormData({ ...formData, time: matchedTime });
-                    }
-                }}
+                if (matchedTime) {
+                  setFormData({ ...formData, time: matchedTime });
+                }
+              }}
             >
-                <option value="">Select a time...</option>
-                {generateTimeSlots().map((time, index) => (
-                    <option key={index} value={format(time, "h:mm a")}>
-                        {format(time, "h:mm a")}
-                    </option>
-                ))}
+              <option value="">Select a time...</option>
+              {generateTimeSlots().map((time, index) => (
+                <option key={index} value={format(time, "h:mm a")}>
+                  {format(time, "h:mm a")}
+                </option>
+              ))}
             </Select>
             {errors.time && <Text color="red.500">{errors.time}</Text>}
-        </FormControl>
+          </FormControl>
 
-          {/* Submit Button */}
+          <FormControl>
+            <FormLabel>Additional Notes</FormLabel>
+            <Textarea 
+              name="notes" 
+              value={formData.notes} 
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })} 
+              placeholder="Any special requests or details?" 
+            />
+          </FormControl>
+
           <Button type="submit" colorScheme="blue" width="full">
             Book Appointment
           </Button>

@@ -35,11 +35,12 @@ export default function AdminDashboard() {
         id: doc.id,
         ...doc.data(),
       }));
+      // Sort appointments by date and time
+      const sortedAppointments = bookings.sort((a, b) => 
+        new Date(a.date + " " + a.time) - new Date(b.date + " " + b.time)
+      );
 
-      // Sort appointments by date and time (earliest to latest)
-      bookings.sort((a, b) => new Date(a.date + " " + a.time) - new Date(b.date + " " + b.time));
-
-      setAppointments(bookings);
+      setAppointments(sortedAppointments);
     } catch (error) {
       console.error("Error fetching appointments:", error);
     }
@@ -71,9 +72,10 @@ export default function AdminDashboard() {
           <Tr>
             <Th>Name</Th>
             <Th>Email</Th>
-            <Th>Service</Th>
             <Th>Date</Th>
             <Th>Time</Th>
+            <Th>Service</Th>
+            <Th>Notes</Th>
             <Th>Action</Th>
           </Tr>
         </Thead>
@@ -82,9 +84,10 @@ export default function AdminDashboard() {
             <Tr key={appointment.id}>
               <Td>{appointment.name}</Td>
               <Td>{appointment.email}</Td>
-              <Td>{appointment.service || "N/A"}</Td>
-              <Td>{appointment.date || "N/A"}</Td>
-              <Td>{appointment.time || "N/A"}</Td>
+              <Td>{appointment.date}</Td>
+              <Td>{appointment.time}</Td>
+              <Td>{appointment.service}</Td>
+              <Td>{appointment.notes || "No notes"}</Td>
               <Td>
                 <Button colorScheme="red" size="sm" onClick={() => handleDelete(appointment.id)}>
                   Delete
