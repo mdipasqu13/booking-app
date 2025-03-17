@@ -1,33 +1,31 @@
 import { useEffect, useState } from "react";
-import { db } from "../firebase";
+import { db, auth, signOut } from "../firebase";
+import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 import {
-  collection,
-  getDocs,
-  deleteDoc,
-  doc,
-} from "firebase/firestore";
-import {
-  Box,
-  Heading,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  Button,
-  useToast,
+  Box, Heading, Table, Thead, Tbody, Tr, Th, Td, Button, useToast
 } from "@chakra-ui/react";
 
 export default function AdminDashboard() {
   const [appointments, setAppointments] = useState([]);
+  const [user, setUser] = useState(null);
   const toast = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchAppointments();
-  }, []);
+    // Check if user is authenticated
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (!user) {
+        navigate("/login");
+      } else {
+        setUser(user);
+        fetchAppointments();
+      }
+    });
 
-  // Fetch all appointments from Firestore
+    return () => unsubscribe();
+  }, [navigate]);
+
   const fetchAppointments = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "bookings"));
@@ -41,27 +39,25 @@ export default function AdminDashboard() {
     }
   };
 
-  // Delete an appointment
   const handleDelete = async (id) => {
     try {
       await deleteDoc(doc(db, "bookings", id));
       setAppointments(appointments.filter((appointment) => appointment.id !== id));
-      toast({
-        title: "Appointment deleted.",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
+      toast({ title: "Appointment deleted.", status: "error", duration: 3000, isClosable: true });
     } catch (error) {
       console.error("Error deleting appointment:", error);
     }
   };
 
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate("/login");
+  };
+
   return (
     <Box maxW="800px" mx="auto" mt={10} p={6} borderWidth="1px" borderRadius="lg" boxShadow="lg" bg="white">
-      <Heading size="lg" mb={4} textAlign="center">
-        Admin Dashboard
-      </Heading>
+      <Heading size="lg" mb={4} textAlign="center">Admin Dashboard</Heading>
+      <Button colorScheme="red" mb={4} onClick={handleLogout}>Logout</Button>
       <Table variant="simple">
         <Thead>
           <Tr>
@@ -80,9 +76,7 @@ export default function AdminDashboard() {
               <Td>{appointment.date}</Td>
               <Td>{appointment.time}</Td>
               <Td>
-                <Button colorScheme="red" size="sm" onClick={() => handleDelete(appointment.id)}>
-                  Delete
-                </Button>
+                <Button colorScheme="red" size="sm" onClick={() => handleDelete(appointment.id)}>Delete</Button>
               </Td>
             </Tr>
           ))}
