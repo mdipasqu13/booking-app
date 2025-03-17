@@ -14,8 +14,8 @@ import {
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { format, getDay, setHours, setMinutes, isBefore, addMinutes } from "date-fns";
-import { collection, addDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { collection, addDoc } from "../firebase"; // Ensure the correct import path
+import { db } from "../firebase"; 
 
 export default function BookingForm() {
   const [formData, setFormData] = useState({
@@ -54,25 +54,24 @@ export default function BookingForm() {
     e.preventDefault();
     if (!validateForm()) return;
   
-    console.log("Selected Time Before Formatting:", formData.time); // Debugging Step
-  
-    const formattedTime = formData.time && !isNaN(new Date(formData.time))
-      ? format(new Date(formData.time), "hh:mm a")
-      : "Invalid Time";
-  
-    console.log("Formatted Time:", formattedTime); // Another Debugging Step
-  
     try {
-      await addDoc(collection(db, "bookings"), {
+      // Convert time to formatted string
+      const formattedTime = formData.time ? format(formData.time, "hh:mm a") : "";
+
+      // Store the booking in Firestore
+      const bookingRef = await addDoc(collection(db, "bookings"), {
         service: formData.service,
         name: formData.name,
         email: formData.email,
         phone: formData.phone || "",
-        date: format(formData.date, "yyyy-MM-dd"),
+        date: formData.date ? format(formData.date, "yyyy-MM-dd") : null,
         time: formattedTime,
-        createdAt: new Date(),
+        timestamp: new Date(),
       });
-  
+
+      console.log("Booking stored with ID:", bookingRef.id);
+
+      // Show success message
       toast({
         title: "Appointment booked!",
         description: `You have booked ${formData.service} on ${format(formData.date, "MMMM dd, yyyy")} at ${formattedTime}.`,
@@ -80,20 +79,22 @@ export default function BookingForm() {
         duration: 4000,
         isClosable: true,
       });
-  
+
+      // Reset form
       setFormData({ service: "", name: "", email: "", phone: "", date: null, time: null });
       setErrors({});
     } catch (error) {
       console.error("Error booking appointment:", error);
       toast({
         title: "Error",
-        description: "Something went wrong. Please try again later.",
+        description: "Something went wrong. Please try again.",
         status: "error",
         duration: 4000,
         isClosable: true,
       });
     }
   };
+
    // Disable weekends in the Date Picker
    const isWeekday = (date) => {
     const day = getDay(date);
