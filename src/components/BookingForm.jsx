@@ -14,7 +14,7 @@ import {
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { format, getDay, setHours, setMinutes, isBefore, addMinutes } from "date-fns";
-import { collection, addDoc } from "../firebase"; // Ensure the correct import path
+import { collection, addDoc } from "../firebase"; 
 import { db } from "../firebase"; 
 
 export default function BookingForm() {

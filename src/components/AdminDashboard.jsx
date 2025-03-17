@@ -1,31 +1,33 @@
 import { useEffect, useState } from "react";
-import { db, auth, signOut } from "../firebase";
-import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
-import { useNavigate } from "react-router-dom";
+import { db } from "../firebase";
 import {
-  Box, Heading, Table, Thead, Tbody, Tr, Th, Td, Button, useToast
+  collection,
+  getDocs,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
+import {
+  Box,
+  Heading,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  Button,
+  useToast,
 } from "@chakra-ui/react";
 
 export default function AdminDashboard() {
   const [appointments, setAppointments] = useState([]);
-  const [user, setUser] = useState(null);
   const toast = useToast();
-  const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is authenticated
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (!user) {
-        navigate("/login");
-      } else {
-        setUser(user);
-        fetchAppointments();
-      }
-    });
+    fetchAppointments();
+  }, []);
 
-    return () => unsubscribe();
-  }, [navigate]);
-
+  // Fetch all appointments from Firestore
   const fetchAppointments = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "bookings"));
@@ -33,36 +35,43 @@ export default function AdminDashboard() {
         id: doc.id,
         ...doc.data(),
       }));
+
+      // Sort appointments by date and time (earliest to latest)
+      bookings.sort((a, b) => new Date(a.date + " " + a.time) - new Date(b.date + " " + b.time));
+
       setAppointments(bookings);
     } catch (error) {
       console.error("Error fetching appointments:", error);
     }
   };
 
+  // Delete an appointment
   const handleDelete = async (id) => {
     try {
       await deleteDoc(doc(db, "bookings", id));
       setAppointments(appointments.filter((appointment) => appointment.id !== id));
-      toast({ title: "Appointment deleted.", status: "error", duration: 3000, isClosable: true });
+      toast({
+        title: "Appointment deleted.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
     } catch (error) {
       console.error("Error deleting appointment:", error);
     }
   };
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    navigate("/login");
-  };
-
   return (
-    <Box maxW="800px" mx="auto" mt={10} p={6} borderWidth="1px" borderRadius="lg" boxShadow="lg" bg="white">
-      <Heading size="lg" mb={4} textAlign="center">Admin Dashboard</Heading>
-      <Button colorScheme="red" mb={4} onClick={handleLogout}>Logout</Button>
+    <Box maxW="900px" mx="auto" mt={10} p={6} borderWidth="1px" borderRadius="lg" boxShadow="lg" bg="white">
+      <Heading size="lg" mb={4} textAlign="center">
+        Admin Dashboard
+      </Heading>
       <Table variant="simple">
         <Thead>
           <Tr>
             <Th>Name</Th>
             <Th>Email</Th>
+            <Th>Service</Th>
             <Th>Date</Th>
             <Th>Time</Th>
             <Th>Action</Th>
@@ -73,10 +82,13 @@ export default function AdminDashboard() {
             <Tr key={appointment.id}>
               <Td>{appointment.name}</Td>
               <Td>{appointment.email}</Td>
-              <Td>{appointment.date}</Td>
-              <Td>{appointment.time}</Td>
+              <Td>{appointment.service || "N/A"}</Td>
+              <Td>{appointment.date || "N/A"}</Td>
+              <Td>{appointment.time || "N/A"}</Td>
               <Td>
-                <Button colorScheme="red" size="sm" onClick={() => handleDelete(appointment.id)}>Delete</Button>
+                <Button colorScheme="red" size="sm" onClick={() => handleDelete(appointment.id)}>
+                  Delete
+                </Button>
               </Td>
             </Tr>
           ))}
