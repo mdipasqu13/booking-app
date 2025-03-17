@@ -1,12 +1,26 @@
-import { ChakraProvider, Box } from "@chakra-ui/react";
+import { Routes, Route, Link } from "react-router-dom";
+import { Box, HStack, Button } from "@chakra-ui/react";
 import BookingForm from "./components/BookingForm";
+import AdminDashboard from "./components/AdminDashboard";
 
 export default function App() {
   return (
-    <ChakraProvider>
-      <Box bg="#F7F7F7" minH="100vh" p={6}>
-        <BookingForm />
-      </Box>
-    </ChakraProvider>
+    <Box>
+      {/* Navbar */}
+      <HStack p={4} bg="blue.500" justify="center">
+        <Button as={Link} to="/" colorScheme="blue" variant="ghost" color="white">
+          Book Appointment
+        </Button>
+        <Button as={Link} to="/admin" colorScheme="blue" variant="ghost" color="white">
+          Admin Dashboard
+        </Button>
+      </HStack>
+
+      {/* Page Routes */}
+      <Routes>
+        <Route path="/" element={<BookingForm />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+      </Routes>
+    </Box>
   );
 }
