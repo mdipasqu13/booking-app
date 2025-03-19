@@ -17,6 +17,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import { format, getDay, setHours, setMinutes, isBefore, addMinutes } from "date-fns";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "../firebase";
+import emailjs from "@emailjs/browser";
+
 
 export default function BookingForm() {
   const [formData, setFormData] = useState({
@@ -90,6 +92,26 @@ export default function BookingForm() {
         isClosable: true,
       });
     }
+    const emailParams = {
+        service: formData.service,
+        name: formData.name,
+        email: formData.email,
+        date: format(formData.date, "MMMM dd, yyyy"),
+        time: format(formData.time, "h:mm a"),
+        notes: formData.notes || "No additional notes.",
+      };
+      
+      emailjs
+        .send(
+          import.meta.env.VITE_EMAILJS_SERVICE_ID,
+          import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+          emailParams,
+          import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+        )
+        .then(
+          (response) => console.log("Email sent successfully!", response),
+          (error) => console.error("Email send failed:", error)
+        );
   };
 
   const isWeekday = (date) => {
