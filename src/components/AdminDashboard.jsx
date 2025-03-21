@@ -24,6 +24,7 @@ import {
   Input,
   Text,
   useToast,
+  useColorModeValue,
 } from "@chakra-ui/react";
 import { format, parseISO } from "date-fns";
 
@@ -34,12 +35,15 @@ export default function AdminDashboard() {
   const [selectedTime, setSelectedTime] = useState("");
   const toast = useToast();
 
+  const bgColor = useColorModeValue("white", "gray.800");
+  const borderColor = useColorModeValue("gray.200", "gray.700");
+  const textColor = useColorModeValue("gray.800", "gray.100");
+
   useEffect(() => {
     fetchAppointments();
     fetchBlockedTimes();
   }, []);
 
-  // Fetch all appointments from Firestore
   const fetchAppointments = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "bookings"));
@@ -48,7 +52,6 @@ export default function AdminDashboard() {
         ...doc.data(),
       }));
 
-      // Sort by date and time
       bookings.sort((a, b) => {
         const dateA = parseISO(a.date);
         const dateB = parseISO(b.date);
@@ -61,7 +64,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Fetch blocked times from Firestore
   const fetchBlockedTimes = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "blocked_times"));
@@ -75,7 +77,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Delete an appointment
   const handleDelete = async (id) => {
     try {
       await deleteDoc(doc(db, "bookings", id));
@@ -91,7 +92,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Block a time slot
   const handleBlockTime = async () => {
     if (!selectedDate || !selectedTime) {
       toast({
@@ -126,7 +126,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Unblock (delete) a blocked time slot
   const handleUnblockTime = async (id) => {
     try {
       await deleteDoc(doc(db, "blocked_times", id));
@@ -145,12 +144,22 @@ export default function AdminDashboard() {
   };
 
   return (
-    <Box maxW="1100px" mx="auto" mt={10} p={6} borderWidth="1px" borderRadius="lg" boxShadow="lg" bg="white">
+    <Box
+      maxW="1100px"
+      mx="auto"
+      mt={10}
+      p={6}
+      borderWidth="1px"
+      borderRadius="lg"
+      boxShadow="lg"
+      bg={bgColor}
+      borderColor={borderColor}
+      color={textColor}
+    >
       <Heading size="lg" mb={4} textAlign="center">
         Admin Dashboard
       </Heading>
 
-      {/* Block Time Slot Form */}
       <VStack spacing={4} align="stretch" mb={6}>
         <Heading size="md">Block a Timeslot</Heading>
         <FormControl>
@@ -175,7 +184,6 @@ export default function AdminDashboard() {
         </Button>
       </VStack>
 
-      {/* Blocked Times Table */}
       <Heading size="md" mb={4}>Blocked Time Slots</Heading>
       {blockedTimes.length > 0 ? (
         <Table variant="simple" overflowX="auto">
@@ -204,7 +212,6 @@ export default function AdminDashboard() {
         <Text>No blocked times.</Text>
       )}
 
-      {/* Booked Appointments Table */}
       <Heading size="md" mt={6} mb={4}>Booked Appointments</Heading>
       {appointments.length > 0 ? (
         <Table variant="simple" overflowX="auto">
@@ -227,7 +234,7 @@ export default function AdminDashboard() {
                 <Td>{appointment.service}</Td>
                 <Td>{appointment.date}</Td>
                 <Td>{appointment.time}</Td>
-                <Td>{appointment.notes || "No additional notes."}</Td> 
+                <Td>{appointment.notes || "No additional notes."}</Td>
                 <Td>
                   <Button colorScheme="red" size="sm" onClick={() => handleDelete(appointment.id)}>
                     Delete

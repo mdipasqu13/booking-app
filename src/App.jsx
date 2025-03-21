@@ -6,6 +6,9 @@ import AdminDashboard from "./components/AdminDashboard";
 import Login from "./components/Login";
 import { auth, onAuthStateChanged, signOut } from "./firebase";
 import PrivateRoute from "./components/PrivateRoute";
+import { useColorMode } from "@chakra-ui/react";
+import { MoonIcon, SunIcon } from "@chakra-ui/icons";
+
 
 export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -24,10 +27,17 @@ export default function App() {
     navigate("/admin-login");
   };
 
+  const { colorMode, toggleColorMode } = useColorMode();
+
+
   return (
-    <Box>
+    <Box px={[4, 6, 8]} py={[4, 6]} maxW="100%">
+
       {/* Navbar */}
       <HStack p={4} bg="blue.500" justify="center">
+      <Button onClick={toggleColorMode} colorScheme="blue" variant="ghost" color="white">
+         {colorMode === "light" ? <MoonIcon /> : <SunIcon />}
+        </Button>
         <Button as={Link} to="/" colorScheme="blue" variant="ghost" color="white">
           Book Appointment
         </Button>

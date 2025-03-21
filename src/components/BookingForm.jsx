@@ -11,6 +11,7 @@ import {
   Text,
   Textarea,
   useToast,
+  useColorModeValue,
 } from "@chakra-ui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -32,6 +33,9 @@ export default function BookingForm() {
   const [errors, setErrors] = useState({});
   const [blockedTimes, setBlockedTimes] = useState([]);
   const toast = useToast();
+  const bgColor = useColorModeValue("white", "gray.800");
+  const borderColor = useColorModeValue("gray.200", "gray.700");
+  const textColor = useColorModeValue("gray.800", "gray.100");
 
   // Fetch blocked times from Firestore
   useEffect(() => {
@@ -178,8 +182,18 @@ export default function BookingForm() {
   };
 
   return (
-    <Box maxW="500px" mx="auto" mt={10} p={6} borderWidth="1px" borderRadius="lg" boxShadow="lg" bg="white">
-      <Heading size="lg" mb={4} textAlign="center">
+    <Box
+  maxW="500px"
+  mx="auto"
+  mt={10}
+  p={6}
+  borderWidth="1px"
+  borderRadius="lg"
+  boxShadow="lg"
+  bg={bgColor}
+  borderColor={borderColor}
+  color={textColor}
+>      <Heading size="lg" mb={4} textAlign="center">
         Book an Appointment
       </Heading>
       <form onSubmit={handleSubmit}>
