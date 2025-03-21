@@ -2,12 +2,11 @@ import { useState } from "react";
 import {
   Box,
   Heading,
-  FormControl,
-  FormLabel,
   Input,
   Button,
+  FormControl,
+  FormLabel,
   VStack,
-  Text,
   useToast,
   useColorModeValue,
 } from "@chakra-ui/react";
@@ -18,7 +17,6 @@ import { useNavigate } from "react-router-dom";
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const toast = useToast();
   const navigate = useNavigate();
 
@@ -28,11 +26,10 @@ export default function Login() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
       toast({
-        title: "Logged in successfully!",
+        title: "Login successful!",
         status: "success",
         duration: 3000,
         isClosable: true,
@@ -42,13 +39,11 @@ export default function Login() {
       console.error("Login error:", error);
       toast({
         title: "Login failed",
-        description: error.message,
+        description: "Invalid credentials. Please try again.",
         status: "error",
-        duration: 4000,
+        duration: 3000,
         isClosable: true,
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -69,13 +64,14 @@ export default function Login() {
         Admin Login
       </Heading>
       <form onSubmit={handleLogin}>
-        <VStack spacing={4} align="stretch">
+        <VStack spacing={4}>
           <FormControl isRequired>
             <FormLabel>Email</FormLabel>
             <Input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin email"
             />
           </FormControl>
 
@@ -85,15 +81,11 @@ export default function Login() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
             />
           </FormControl>
 
-          <Button
-            type="submit"
-            colorScheme="blue"
-            isLoading={loading}
-            width="full"
-          >
+          <Button type="submit" colorScheme="blue" width="full">
             Login
           </Button>
         </VStack>

@@ -15,7 +15,15 @@ import {
 } from "@chakra-ui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { format, getDay, setHours, setMinutes, isBefore, addMinutes, parse } from "date-fns";
+import {
+  format,
+  getDay,
+  setHours,
+  setMinutes,
+  isBefore,
+  addMinutes,
+  parse,
+} from "date-fns";
 import { collection, addDoc, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import emailjs from "@emailjs/browser";
@@ -33,11 +41,11 @@ export default function BookingForm() {
   const [errors, setErrors] = useState({});
   const [blockedTimes, setBlockedTimes] = useState([]);
   const toast = useToast();
+
   const bgColor = useColorModeValue("white", "gray.800");
   const borderColor = useColorModeValue("gray.200", "gray.700");
   const textColor = useColorModeValue("gray.800", "gray.100");
 
-  // Fetch blocked times from Firestore
   useEffect(() => {
     const fetchBlockedTimes = async () => {
       try {
@@ -52,7 +60,6 @@ export default function BookingForm() {
         console.error("Error fetching blocked times:", error);
       }
     };
-
     fetchBlockedTimes();
   }, []);
 
@@ -69,7 +76,6 @@ export default function BookingForm() {
       newErrors.email = "Enter a valid email.";
     }
 
-    // Prevent booking if the time slot is blocked
     if (isTimeBlocked(formData.date, formData.time)) {
       newErrors.time = "This time slot is unavailable. Please select another time.";
     }
@@ -117,7 +123,6 @@ export default function BookingForm() {
       });
     }
 
-    // Send email notifications
     const emailParams = {
       service: formData.service,
       date: format(formData.date, "MMMM dd, yyyy"),
@@ -172,10 +177,8 @@ export default function BookingForm() {
 
   const isTimeBlocked = (date, time) => {
     if (!date || !time) return false;
-
     const formattedDate = format(date, "yyyy-MM-dd");
     const formattedTime = format(parse(time, "h:mm a", new Date()), "h:mm a");
-
     return blockedTimes.some(
       (block) => block.date === formattedDate && block.time === formattedTime
     );
@@ -183,25 +186,29 @@ export default function BookingForm() {
 
   return (
     <Box
-  maxW="500px"
-  mx="auto"
-  mt={10}
-  p={6}
-  borderWidth="1px"
-  borderRadius="lg"
-  boxShadow="lg"
-  bg={bgColor}
-  borderColor={borderColor}
-  color={textColor}
->      <Heading size="lg" mb={4} textAlign="center">
+      maxW={["100%", "500px"]}
+      mx="auto"
+      mt={10}
+      p={[4, 6]}
+      borderWidth="1px"
+      borderRadius="lg"
+      boxShadow="lg"
+      bg={bgColor}
+      borderColor={borderColor}
+      color={textColor}
+    >
+      <Heading size="lg" mb={6} textAlign="center">
         Book an Appointment
       </Heading>
       <form onSubmit={handleSubmit}>
-        <VStack spacing={4}>
-          {/* 1️⃣ Service Selection */}
+        <VStack spacing={4} align="stretch">
           <FormControl isRequired isInvalid={errors.service}>
             <FormLabel>Select a Service</FormLabel>
-            <Select name="service" value={formData.service} onChange={(e) => setFormData({ ...formData, service: e.target.value })}>
+            <Select
+              name="service"
+              value={formData.service}
+              onChange={(e) => setFormData({ ...formData, service: e.target.value })}
+            >
               <option value="">Select...</option>
               <option value="web-design">Web Design</option>
               <option value="seo-consulting">Consulting</option>
@@ -209,7 +216,6 @@ export default function BookingForm() {
             </Select>
           </FormControl>
 
-          {/* 2️⃣ Date Picker */}
           <FormControl isRequired isInvalid={errors.date}>
             <FormLabel>Select a Date</FormLabel>
             <DatePicker
@@ -223,36 +229,57 @@ export default function BookingForm() {
             />
           </FormControl>
 
-          {/* 3️⃣ Time Selection */}
           <FormControl isRequired isInvalid={errors.time}>
             <FormLabel>Select a Time</FormLabel>
-            <Select name="time" value={formData.time} onChange={(e) => setFormData({ ...formData, time: e.target.value })}>
-              {generateTimeSlots().map((time, index) =>
-                !isTimeBlocked(formData.date, format(time, "h:mm a")) ? (
-                  <option key={index} value={format(time, "h:mm a")}>{format(time, "h:mm a")}</option>
-                ) : null
-              )}
+            <Select
+              name="time"
+              value={formData.time}
+              onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+            >
+              {generateTimeSlots().map((time, index) => {
+                const formatted = format(time, "h:mm a");
+                return !isTimeBlocked(formData.date, formatted) ? (
+                  <option key={index} value={formatted}>
+                    {formatted}
+                  </option>
+                ) : null;
+              })}
             </Select>
           </FormControl>
 
-          {/* 4️⃣ Additional Notes */}
           <FormControl>
             <FormLabel>Additional Notes</FormLabel>
-            <Textarea name="notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Any special requests or details?" />
+            <Textarea
+              name="notes"
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              placeholder="Any special requests or details?"
+            />
           </FormControl>
 
-          {/* 5️⃣ Name & Email Fields */}
           <FormControl isRequired isInvalid={errors.name}>
             <FormLabel>Name</FormLabel>
-            <Input type="text" name="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+            <Input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            />
           </FormControl>
 
           <FormControl isRequired isInvalid={errors.email}>
             <FormLabel>Email</FormLabel>
-            <Input type="email" name="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+            <Input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            />
           </FormControl>
 
-          <Button type="submit" colorScheme="blue" width="full">Book Appointment</Button>
+          <Button type="submit" colorScheme="blue" width="full">
+            Book Appointment
+          </Button>
         </VStack>
       </form>
     </Box>
