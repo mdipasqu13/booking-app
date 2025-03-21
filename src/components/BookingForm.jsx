@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Heading,
@@ -14,40 +14,60 @@ import {
 } from "@chakra-ui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { format, getDay, setHours, setMinutes, isBefore, addMinutes } from "date-fns";
-import { collection, addDoc } from "firebase/firestore";
+import { format, getDay, setHours, setMinutes, isBefore, addMinutes, parse } from "date-fns";
+import { collection, addDoc, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import emailjs from "@emailjs/browser";
-
 
 export default function BookingForm() {
   const [formData, setFormData] = useState({
     service: "",
+    date: null,
+    time: "",
+    notes: "",
     name: "",
     email: "",
-    phone: "",
-    date: null, 
-    time: null, 
-    notes: "",
   });
 
   const [errors, setErrors] = useState({});
+  const [blockedTimes, setBlockedTimes] = useState([]);
   const toast = useToast();
+
+  // Fetch blocked times from Firestore
+  useEffect(() => {
+    const fetchBlockedTimes = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "blocked_times"));
+        const blocked = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          date: doc.data().date,
+          time: doc.data().time,
+        }));
+        setBlockedTimes(blocked);
+      } catch (error) {
+        console.error("Error fetching blocked times:", error);
+      }
+    };
+
+    fetchBlockedTimes();
+  }, []);
 
   const validateForm = () => {
     let newErrors = {};
 
     if (!formData.service) newErrors.service = "Please select a service.";
+    if (!formData.date) newErrors.date = "Please select a date.";
+    if (!formData.time) newErrors.time = "Please select a time.";
     if (!formData.name.trim()) newErrors.name = "Name is required.";
     if (!formData.email.trim()) {
       newErrors.email = "Email is required.";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Enter a valid email.";
     }
-    if (!formData.date) newErrors.date = "Please select a date.";
-    if (!formData.time) newErrors.time = "Please select a time.";
-    if (formData.phone && !/^\d+$/.test(formData.phone)) {
-      newErrors.phone = "Phone number should only contain digits.";
+
+    // Prevent booking if the time slot is blocked
+    if (isTimeBlocked(formData.date, formData.time)) {
+      newErrors.time = "This time slot is unavailable. Please select another time.";
     }
 
     setErrors(newErrors);
@@ -58,17 +78,17 @@ export default function BookingForm() {
     e.preventDefault();
     if (!validateForm()) return;
 
-    const formattedTime = formData.time ? format(formData.time, "hh:mm a") : "Invalid Time";
+    const formattedDate = format(formData.date, "yyyy-MM-dd");
+    const formattedTime = format(parse(formData.time, "h:mm a", new Date()), "hh:mm a");
 
     try {
       await addDoc(collection(db, "bookings"), {
         service: formData.service,
+        date: formattedDate,
+        time: formattedTime,
+        notes: formData.notes,
         name: formData.name,
         email: formData.email,
-        phone: formData.phone || "",
-        date: format(formData.date, "yyyy-MM-dd"),
-        time: formattedTime,
-        notes: formData.notes,  // Store additional notes
         createdAt: new Date(),
       });
 
@@ -80,7 +100,7 @@ export default function BookingForm() {
         isClosable: true,
       });
 
-      setFormData({ service: "", name: "", email: "", phone: "", date: null, time: null, notes: "" });
+      setFormData({ service: "", date: null, time: "", notes: "", name: "", email: "" });
       setErrors({});
     } catch (error) {
       console.error("Error booking appointment:", error);
@@ -92,26 +112,40 @@ export default function BookingForm() {
         isClosable: true,
       });
     }
+
+    // Send email notifications
     const emailParams = {
-        service: formData.service,
-        name: formData.name,
-        email: formData.email,
-        date: format(formData.date, "MMMM dd, yyyy"),
-        time: format(formData.time, "h:mm a"),
-        notes: formData.notes || "No additional notes.",
-      };
-      
-      emailjs
-        .send(
-          import.meta.env.VITE_EMAILJS_SERVICE_ID,
-          import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
-          emailParams,
-          import.meta.env.VITE_EMAILJS_PUBLIC_KEY
-        )
-        .then(
-          (response) => console.log("Email sent successfully!", response),
-          (error) => console.error("Email send failed:", error)
-        );
+      service: formData.service,
+      date: format(formData.date, "MMMM dd, yyyy"),
+      time: formattedTime,
+      notes: formData.notes || "No additional notes.",
+      name: formData.name,
+      email: formData.email,
+    };
+
+    emailjs
+      .send(
+        import.meta.env.VITE_EMAILJS_SERVICE_ID,
+        import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+        emailParams,
+        import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+      )
+      .then(
+        (response) => console.log("Admin email sent successfully!", response),
+        (error) => console.error("Admin email send failed:", error)
+      );
+
+    emailjs
+      .send(
+        import.meta.env.VITE_EMAILJS_SERVICE_ID,
+        import.meta.env.VITE_EMAILJS_CONFIRMATION_TEMPLATE_ID,
+        emailParams,
+        import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+      )
+      .then(
+        (response) => console.log("Confirmation email sent successfully!", response),
+        (error) => console.error("Confirmation email send failed:", error)
+      );
   };
 
   const isWeekday = (date) => {
@@ -132,6 +166,17 @@ export default function BookingForm() {
     return times;
   };
 
+  const isTimeBlocked = (date, time) => {
+    if (!date || !time) return false;
+
+    const formattedDate = format(date, "yyyy-MM-dd");
+    const formattedTime = format(parse(time, "h:mm a", new Date()), "h:mm a");
+
+    return blockedTimes.some(
+      (block) => block.date === formattedDate && block.time === formattedTime
+    );
+  };
+
   return (
     <Box maxW="500px" mx="auto" mt={10} p={6} borderWidth="1px" borderRadius="lg" boxShadow="lg" bg="white">
       <Heading size="lg" mb={4} textAlign="center">
@@ -139,6 +184,7 @@ export default function BookingForm() {
       </Heading>
       <form onSubmit={handleSubmit}>
         <VStack spacing={4}>
+          {/* 1️⃣ Service Selection */}
           <FormControl isRequired isInvalid={errors.service}>
             <FormLabel>Select a Service</FormLabel>
             <Select name="service" value={formData.service} onChange={(e) => setFormData({ ...formData, service: e.target.value })}>
@@ -147,27 +193,9 @@ export default function BookingForm() {
               <option value="seo-consulting">Consulting</option>
               <option value="custom-software">Mawmaw's Biscuit Service</option>
             </Select>
-            {errors.service && <Text color="red.500">{errors.service}</Text>}
           </FormControl>
 
-          <FormControl isRequired isInvalid={errors.name}>
-            <FormLabel>Full Name</FormLabel>
-            <Input type="text" name="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
-            {errors.name && <Text color="red.500">{errors.name}</Text>}
-          </FormControl>
-
-          <FormControl isRequired isInvalid={errors.email}>
-            <FormLabel>Email</FormLabel>
-            <Input type="email" name="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
-            {errors.email && <Text color="red.500">{errors.email}</Text>}
-          </FormControl>
-
-          <FormControl isInvalid={errors.phone}>
-            <FormLabel>Phone (Optional)</FormLabel>
-            <Input type="tel" name="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
-            {errors.phone && <Text color="red.500">{errors.phone}</Text>}
-          </FormControl>
-
+          {/* 2️⃣ Date Picker */}
           <FormControl isRequired isInvalid={errors.date}>
             <FormLabel>Select a Date</FormLabel>
             <DatePicker
@@ -179,48 +207,38 @@ export default function BookingForm() {
               placeholderText="Click to select a date"
               className="chakra-input"
             />
-            {errors.date && <Text color="red.500">{errors.date}</Text>}
           </FormControl>
 
+          {/* 3️⃣ Time Selection */}
           <FormControl isRequired isInvalid={errors.time}>
             <FormLabel>Select a Time</FormLabel>
-            <Select
-              name="time"
-              value={formData.time ? format(formData.time, "h:mm a") : ""}
-              onChange={(e) => {
-                const selectedTimeString = e.target.value;
-                const matchedTime = generateTimeSlots().find(
-                  (time) => format(time, "h:mm a") === selectedTimeString
-                );
-
-                if (matchedTime) {
-                  setFormData({ ...formData, time: matchedTime });
-                }
-              }}
-            >
-              <option value="">Select a time...</option>
-              {generateTimeSlots().map((time, index) => (
-                <option key={index} value={format(time, "h:mm a")}>
-                  {format(time, "h:mm a")}
-                </option>
-              ))}
+            <Select name="time" value={formData.time} onChange={(e) => setFormData({ ...formData, time: e.target.value })}>
+              {generateTimeSlots().map((time, index) =>
+                !isTimeBlocked(formData.date, format(time, "h:mm a")) ? (
+                  <option key={index} value={format(time, "h:mm a")}>{format(time, "h:mm a")}</option>
+                ) : null
+              )}
             </Select>
-            {errors.time && <Text color="red.500">{errors.time}</Text>}
           </FormControl>
 
+          {/* 4️⃣ Additional Notes */}
           <FormControl>
             <FormLabel>Additional Notes</FormLabel>
-            <Textarea 
-              name="notes" 
-              value={formData.notes} 
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })} 
-              placeholder="Any special requests or details?" 
-            />
+            <Textarea name="notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Any special requests or details?" />
           </FormControl>
 
-          <Button type="submit" colorScheme="blue" width="full">
-            Book Appointment
-          </Button>
+          {/* 5️⃣ Name & Email Fields */}
+          <FormControl isRequired isInvalid={errors.name}>
+            <FormLabel>Name</FormLabel>
+            <Input type="text" name="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+          </FormControl>
+
+          <FormControl isRequired isInvalid={errors.email}>
+            <FormLabel>Email</FormLabel>
+            <Input type="email" name="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+          </FormControl>
+
+          <Button type="submit" colorScheme="blue" width="full">Book Appointment</Button>
         </VStack>
       </form>
     </Box>

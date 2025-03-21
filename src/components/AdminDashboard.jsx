@@ -5,6 +5,7 @@ import {
   getDocs,
   deleteDoc,
   doc,
+  addDoc,
 } from "firebase/firestore";
 import {
   Box,
@@ -16,15 +17,26 @@ import {
   Th,
   Td,
   Button,
+  FormControl,
+  FormLabel,
+  Select,
+  VStack,
+  Input,
+  Text,
   useToast,
 } from "@chakra-ui/react";
+import { format, parseISO } from "date-fns";
 
 export default function AdminDashboard() {
   const [appointments, setAppointments] = useState([]);
+  const [blockedTimes, setBlockedTimes] = useState([]);
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
   const toast = useToast();
 
   useEffect(() => {
     fetchAppointments();
+    fetchBlockedTimes();
   }, []);
 
   // Fetch all appointments from Firestore
@@ -35,14 +47,31 @@ export default function AdminDashboard() {
         id: doc.id,
         ...doc.data(),
       }));
-      // Sort appointments by date and time
-      const sortedAppointments = bookings.sort((a, b) => 
-        new Date(a.date + " " + a.time) - new Date(b.date + " " + b.time)
-      );
 
-      setAppointments(sortedAppointments);
+      // Sort by date and time
+      bookings.sort((a, b) => {
+        const dateA = parseISO(a.date);
+        const dateB = parseISO(b.date);
+        return dateA - dateB || a.time.localeCompare(b.time);
+      });
+
+      setAppointments(bookings);
     } catch (error) {
       console.error("Error fetching appointments:", error);
+    }
+  };
+
+  // Fetch blocked times from Firestore
+  const fetchBlockedTimes = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "blocked_times"));
+      const blocks = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setBlockedTimes(blocks);
+    } catch (error) {
+      console.error("Error fetching blocked times:", error);
     }
   };
 
@@ -62,41 +91,155 @@ export default function AdminDashboard() {
     }
   };
 
+  // Block a time slot
+  const handleBlockTime = async () => {
+    if (!selectedDate || !selectedTime) {
+      toast({
+        title: "Error",
+        description: "Please select both a date and a time to block.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, "blocked_times"), {
+        date: selectedDate,
+        time: selectedTime,
+      });
+
+      toast({
+        title: "Time slot blocked!",
+        description: `Blocked ${selectedDate} at ${selectedTime}`,
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+
+      fetchBlockedTimes();
+      setSelectedDate("");
+      setSelectedTime("");
+    } catch (error) {
+      console.error("Error blocking time slot:", error);
+    }
+  };
+
+  // Unblock (delete) a blocked time slot
+  const handleUnblockTime = async (id) => {
+    try {
+      await deleteDoc(doc(db, "blocked_times", id));
+      setBlockedTimes(blockedTimes.filter((block) => block.id !== id));
+
+      toast({
+        title: "Time slot unblocked!",
+        description: "The selected blocked time has been removed.",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error("Error unblocking time slot:", error);
+    }
+  };
+
   return (
-    <Box maxW="900px" mx="auto" mt={10} p={6} borderWidth="1px" borderRadius="lg" boxShadow="lg" bg="white">
+    <Box maxW="1100px" mx="auto" mt={10} p={6} borderWidth="1px" borderRadius="lg" boxShadow="lg" bg="white">
       <Heading size="lg" mb={4} textAlign="center">
         Admin Dashboard
       </Heading>
-      <Table variant="simple">
-        <Thead>
-          <Tr>
-            <Th>Name</Th>
-            <Th>Email</Th>
-            <Th>Date</Th>
-            <Th>Time</Th>
-            <Th>Service</Th>
-            <Th>Notes</Th>
-            <Th>Action</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {appointments.map((appointment) => (
-            <Tr key={appointment.id}>
-              <Td>{appointment.name}</Td>
-              <Td>{appointment.email}</Td>
-              <Td>{appointment.date}</Td>
-              <Td>{appointment.time}</Td>
-              <Td>{appointment.service}</Td>
-              <Td>{appointment.notes || "No notes"}</Td>
-              <Td>
-                <Button colorScheme="red" size="sm" onClick={() => handleDelete(appointment.id)}>
-                  Delete
-                </Button>
-              </Td>
+
+      {/* Block Time Slot Form */}
+      <VStack spacing={4} align="stretch" mb={6}>
+        <Heading size="md">Block a Timeslot</Heading>
+        <FormControl>
+          <FormLabel>Select a Date</FormLabel>
+          <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+        </FormControl>
+
+        <FormControl>
+          <FormLabel>Select a Time</FormLabel>
+          <Select value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)}>
+            <option value="">Select a time...</option>
+            {["09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+              "12:00 PM", "12:30 PM", "01:00 PM", "01:30 PM", "02:00 PM", "02:30 PM",
+              "03:00 PM", "03:30 PM", "04:00 PM", "04:30 PM"].map((time, index) => (
+                <option key={index} value={time}>{time}</option>
+              ))}
+          </Select>
+        </FormControl>
+
+        <Button colorScheme="red" onClick={handleBlockTime}>
+          Block Time Slot
+        </Button>
+      </VStack>
+
+      {/* Blocked Times Table */}
+      <Heading size="md" mb={4}>Blocked Time Slots</Heading>
+      {blockedTimes.length > 0 ? (
+        <Table variant="simple" overflowX="auto">
+          <Thead>
+            <Tr>
+              <Th>Date</Th>
+              <Th>Time</Th>
+              <Th>Action</Th>
             </Tr>
-          ))}
-        </Tbody>
-      </Table>
+          </Thead>
+          <Tbody>
+            {blockedTimes.map((block) => (
+              <Tr key={block.id}>
+                <Td>{block.date}</Td>
+                <Td>{block.time}</Td>
+                <Td>
+                  <Button colorScheme="blue" size="sm" onClick={() => handleUnblockTime(block.id)}>
+                    Unblock
+                  </Button>
+                </Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      ) : (
+        <Text>No blocked times.</Text>
+      )}
+
+      {/* Booked Appointments Table */}
+      <Heading size="md" mt={6} mb={4}>Booked Appointments</Heading>
+      {appointments.length > 0 ? (
+        <Table variant="simple" overflowX="auto">
+          <Thead>
+            <Tr>
+              <Th>Name</Th>
+              <Th>Email</Th>
+              <Th>Service</Th>
+              <Th>Date</Th>
+              <Th>Time</Th>
+              <Th>Notes</Th>
+              <Th>Action</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {appointments.map((appointment) => (
+              <Tr key={appointment.id}>
+                <Td>{appointment.name}</Td>
+                <Td>{appointment.email}</Td>
+                <Td>{appointment.service}</Td>
+                <Td>{appointment.date}</Td>
+                <Td>{appointment.time}</Td>
+                <Td>{appointment.notes || "No additional notes."}</Td> 
+                <Td>
+                  <Button colorScheme="red" size="sm" onClick={() => handleDelete(appointment.id)}>
+                    Delete
+                  </Button>
+                </Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      ) : (
+        <Text>No appointments booked.</Text>
+      )}
     </Box>
   );
 }

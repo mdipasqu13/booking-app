@@ -5,18 +5,17 @@ import BookingForm from "./components/BookingForm";
 import AdminDashboard from "./components/AdminDashboard";
 import Login from "./components/Login";
 import { auth, onAuthStateChanged, signOut } from "./firebase";
+import PrivateRoute from "./components/PrivateRoute";
 
 export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Track authentication state
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsAdmin(!!user); // If user exists, they're logged in
+      setIsAdmin(!!user);
     });
-
-    return () => unsubscribe(); // Cleanup on unmount
+    return () => unsubscribe();
   }, []);
 
   const handleLogout = async () => {
@@ -52,7 +51,14 @@ export default function App() {
       <Routes>
         <Route path="/" element={<BookingForm />} />
         <Route path="/admin-login" element={<Login />} />
-        {isAdmin && <Route path="/admin" element={<AdminDashboard />} />}
+        <Route
+          path="/admin"
+          element={
+            <PrivateRoute>
+              <AdminDashboard />
+            </PrivateRoute>
+          }
+        />
       </Routes>
     </Box>
   );
