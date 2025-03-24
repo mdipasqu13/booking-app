@@ -19,6 +19,8 @@ import AdminDashboard from "./components/AdminDashboard";
 import Login from "./components/Login";
 import { auth, onAuthStateChanged, signOut } from "./firebase";
 import PrivateRoute from "./components/PrivateRoute";
+import NotFound from "./components/NotFound";
+
 
 export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -129,6 +131,7 @@ export default function App() {
               </PrivateRoute>
             }
           />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Box>
     </Box>

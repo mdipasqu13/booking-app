@@ -2,32 +2,28 @@ import { useState } from "react";
 import {
   Box,
   Heading,
-  Input,
-  Button,
   FormControl,
   FormLabel,
+  Input,
+  Button,
   VStack,
   useToast,
   useColorModeValue,
+  Text,
 } from "@chakra-ui/react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 import { useNavigate } from "react-router-dom";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const toast = useToast();
   const navigate = useNavigate();
-
-  const bgColor = useColorModeValue("white", "gray.800");
-  const borderColor = useColorModeValue("gray.200", "gray.700");
-  const textColor = useColorModeValue("gray.800", "gray.100");
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, formData.email, formData.password);
       toast({
         title: "Login successful!",
         status: "success",
@@ -46,6 +42,10 @@ export default function Login() {
       });
     }
   };
+
+  const bgColor = useColorModeValue("white", "gray.800");
+  const borderColor = useColorModeValue("gray.200", "gray.700");
+  const textColor = useColorModeValue("gray.800", "gray.100");
 
   return (
     <Box
@@ -69,9 +69,8 @@ export default function Login() {
             <FormLabel>Email</FormLabel>
             <Input
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             />
           </FormControl>
 
@@ -79,9 +78,8 @@ export default function Login() {
             <FormLabel>Password</FormLabel>
             <Input
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             />
           </FormControl>
 
