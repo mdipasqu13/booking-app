@@ -13,6 +13,8 @@ import AdminDashboard from "./components/AdminDashboard";
 import Login from "./components/Login";
 import PrivateRoute from "./components/PrivateRoute";
 import { auth, onAuthStateChanged, signOut } from "./firebase";
+import Contact from "./components/Contact";
+
 
 export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -52,6 +54,9 @@ export default function App() {
             <Button as={Link} to="/admin" colorScheme="blue" variant="ghost" color="white">
               Admin Dashboard
             </Button>
+            <Button as={Link} to="/contact" colorScheme="blue" variant="ghost" color="white">
+              Contact
+            </Button>
             <Button onClick={handleLogout} colorScheme="red" variant="ghost" color="white">
               Logout
             </Button>
@@ -71,6 +76,7 @@ export default function App() {
             </PrivateRoute>
           }
         />
+        <Route path="/contact" element={<Contact />} />
       </Routes>
     </Box>
   );

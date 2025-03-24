@@ -14,6 +14,7 @@ import {
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 
 export default function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -48,46 +49,52 @@ export default function Login() {
   const textColor = useColorModeValue("gray.800", "gray.100");
 
   return (
-    <Box
-      maxW="400px"
-      mx="auto"
-      mt={10}
-      p={6}
-      borderWidth="1px"
-      borderRadius="lg"
-      boxShadow="lg"
-      bg={bgColor}
-      borderColor={borderColor}
-      color={textColor}
+    <motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.6 }}
     >
-      <Heading size="lg" mb={4} textAlign="center">
-        Admin Login
-      </Heading>
-      <form onSubmit={handleLogin}>
-        <VStack spacing={4}>
-          <FormControl isRequired>
-            <FormLabel>Email</FormLabel>
-            <Input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            />
-          </FormControl>
+        <Box
+        maxW="400px"
+        mx="auto"
+        mt={10}
+        p={6}
+        borderWidth="1px"
+        borderRadius="lg"
+        boxShadow="lg"
+        bg={bgColor}
+        borderColor={borderColor}
+        color={textColor}
+        >
+        <Heading size="lg" mb={4} textAlign="center">
+            Admin Login
+        </Heading>
+        <form onSubmit={handleLogin}>
+            <VStack spacing={4}>
+            <FormControl isRequired>
+                <FormLabel>Email</FormLabel>
+                <Input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                />
+            </FormControl>
 
-          <FormControl isRequired>
-            <FormLabel>Password</FormLabel>
-            <Input
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            />
-          </FormControl>
+            <FormControl isRequired>
+                <FormLabel>Password</FormLabel>
+                <Input
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                />
+            </FormControl>
 
-          <Button type="submit" colorScheme="blue" width="full">
-            Login
-          </Button>
-        </VStack>
-      </form>
-    </Box>
+            <Button type="submit" colorScheme="blue" width="full">
+                Login
+            </Button>
+            </VStack>
+        </form>
+        </Box>
+    </motion.div>
   );
 }
