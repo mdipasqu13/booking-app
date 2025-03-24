@@ -14,6 +14,7 @@ import BookingForm from "./components/BookingForm";
 import AdminDashboard from "./components/AdminDashboard";
 import Login from "./components/Login";
 import PrivateRoute from "./components/PrivateRoute";
+import Contact from "./components/Contact"; // 👈 ADD THIS
 import { auth, onAuthStateChanged, signOut } from "./firebase";
 import { useDisclosure } from "@chakra-ui/react";
 
@@ -40,9 +41,10 @@ export default function App() {
 
   return (
     <Box minH="100vh" bg={bgColor}>
+      {/* Navbar */}
       <Box bg="blue.500" px={4} py={3} boxShadow="sm">
         <Box maxW="1200px" mx="auto">
-          {/* Hamburger icon (mobile only) */}
+          {/* Hamburger icon (mobile) */}
           <Box display={{ base: "flex", md: "none" }} justifyContent="flex-end">
             <IconButton
               icon={isOpen ? <CloseIcon /> : <HamburgerIcon />}
@@ -53,6 +55,7 @@ export default function App() {
             />
           </Box>
 
+          {/* Nav Links - Desktop */}
           <Stack
             direction="row"
             spacing={4}
@@ -66,6 +69,9 @@ export default function App() {
             </Button>
             <Button as={Link} to="/" variant="ghost" color="white">
               Book Appointment
+            </Button>
+            <Button as={Link} to="/contact" variant="ghost" color="white">
+              Contact
             </Button>
             {!isAdmin ? (
               <Button as={Link} to="/admin-login" variant="ghost" color="white">
@@ -83,6 +89,7 @@ export default function App() {
             )}
           </Stack>
 
+          {/* Nav Links - Mobile */}
           {isOpen && (
             <VStack spacing={3} mt={4} display={{ base: "flex", md: "none" }}>
               <Button onClick={toggleColorMode} variant="ghost" color="white">
@@ -90,6 +97,9 @@ export default function App() {
               </Button>
               <Button as={Link} to="/" variant="ghost" color="white">
                 Book Appointment
+              </Button>
+              <Button as={Link} to="/contact" variant="ghost" color="white">
+                Contact
               </Button>
               {!isAdmin ? (
                 <Button as={Link} to="/admin-login" variant="ghost" color="white">
@@ -110,10 +120,12 @@ export default function App() {
         </Box>
       </Box>
 
+      {/* Page Routes */}
       <Box maxW="1200px" mx="auto" px={4} py={8}>
         <Routes>
           <Route path="/" element={<BookingForm />} />
           <Route path="/admin-login" element={<Login />} />
+          <Route path="/contact" element={<Contact />} /> {/* 👈 ADD THIS ROUTE */}
           <Route
             path="/admin"
             element={
