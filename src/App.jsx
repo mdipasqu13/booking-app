@@ -2,25 +2,28 @@ import { useEffect, useState } from "react";
 import { Routes, Route, Link, useNavigate } from "react-router-dom";
 import {
   Box,
-  HStack,
+  Stack,
   Button,
   useColorMode,
   useColorModeValue,
+  IconButton,
+  VStack,
 } from "@chakra-ui/react";
-import { MoonIcon, SunIcon } from "@chakra-ui/icons";
+import { MoonIcon, SunIcon, HamburgerIcon, CloseIcon } from "@chakra-ui/icons";
 import BookingForm from "./components/BookingForm";
 import AdminDashboard from "./components/AdminDashboard";
 import Login from "./components/Login";
 import PrivateRoute from "./components/PrivateRoute";
 import { auth, onAuthStateChanged, signOut } from "./firebase";
-import Contact from "./components/Contact";
-
+import { useDisclosure } from "@chakra-ui/react";
 
 export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
   const { colorMode, toggleColorMode } = useColorMode();
-  const bgColor = useColorModeValue("gray.50", "gray.900"); 
+  const { isOpen, onToggle } = useDisclosure();
+
+  const bgColor = useColorModeValue("gray.50", "gray.900");
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -37,47 +40,90 @@ export default function App() {
 
   return (
     <Box minH="100vh" bg={bgColor}>
-      {/* Navbar */}
-      <HStack p={4} bg="blue.500" justify="center" spacing={2}>
-        <Button onClick={toggleColorMode} colorScheme="blue" variant="ghost" color="white">
-          {colorMode === "light" ? <MoonIcon /> : <SunIcon />}
-        </Button>
-        <Button as={Link} to="/" colorScheme="blue" variant="ghost" color="white">
-          Book Appointment
-        </Button>
-        {!isAdmin ? (
-          <Button as={Link} to="/admin-login" colorScheme="blue" variant="ghost" color="white">
-            Admin Login
-          </Button>
-        ) : (
-          <>
-            <Button as={Link} to="/admin" colorScheme="blue" variant="ghost" color="white">
-              Admin Dashboard
-            </Button>
-            <Button as={Link} to="/contact" colorScheme="blue" variant="ghost" color="white">
-              Contact
-            </Button>
-            <Button onClick={handleLogout} colorScheme="red" variant="ghost" color="white">
-              Logout
-            </Button>
-          </>
-        )}
-      </HStack>
+      <Box bg="blue.500" px={4} py={3} boxShadow="sm">
+        <Box maxW="1200px" mx="auto">
+          {/* Hamburger icon (mobile only) */}
+          <Box display={{ base: "flex", md: "none" }} justifyContent="flex-end">
+            <IconButton
+              icon={isOpen ? <CloseIcon /> : <HamburgerIcon />}
+              variant="ghost"
+              color="white"
+              onClick={onToggle}
+              aria-label="Toggle Navigation"
+            />
+          </Box>
 
-      {/* Page Routes */}
-      <Routes>
-        <Route path="/" element={<BookingForm />} />
-        <Route path="/admin-login" element={<Login />} />
-        <Route
-          path="/admin"
-          element={
-            <PrivateRoute>
-              <AdminDashboard />
-            </PrivateRoute>
-          }
-        />
-        <Route path="/contact" element={<Contact />} />
-      </Routes>
+          <Stack
+            direction="row"
+            spacing={4}
+            justify="center"
+            align="center"
+            mt={{ base: 0, md: 2 }}
+            display={{ base: "none", md: "flex" }}
+          >
+            <Button onClick={toggleColorMode} variant="ghost" color="white">
+              {colorMode === "light" ? <MoonIcon /> : <SunIcon />}
+            </Button>
+            <Button as={Link} to="/" variant="ghost" color="white">
+              Book Appointment
+            </Button>
+            {!isAdmin ? (
+              <Button as={Link} to="/admin-login" variant="ghost" color="white">
+                Admin Login
+              </Button>
+            ) : (
+              <>
+                <Button as={Link} to="/admin" variant="ghost" color="white">
+                  Admin Dashboard
+                </Button>
+                <Button onClick={handleLogout} variant="ghost" color="white">
+                  Logout
+                </Button>
+              </>
+            )}
+          </Stack>
+
+          {isOpen && (
+            <VStack spacing={3} mt={4} display={{ base: "flex", md: "none" }}>
+              <Button onClick={toggleColorMode} variant="ghost" color="white">
+                {colorMode === "light" ? <MoonIcon /> : <SunIcon />}
+              </Button>
+              <Button as={Link} to="/" variant="ghost" color="white">
+                Book Appointment
+              </Button>
+              {!isAdmin ? (
+                <Button as={Link} to="/admin-login" variant="ghost" color="white">
+                  Admin Login
+                </Button>
+              ) : (
+                <>
+                  <Button as={Link} to="/admin" variant="ghost" color="white">
+                    Admin Dashboard
+                  </Button>
+                  <Button onClick={handleLogout} variant="ghost" color="white">
+                    Logout
+                  </Button>
+                </>
+              )}
+            </VStack>
+          )}
+        </Box>
+      </Box>
+
+      <Box maxW="1200px" mx="auto" px={4} py={8}>
+        <Routes>
+          <Route path="/" element={<BookingForm />} />
+          <Route path="/admin-login" element={<Login />} />
+          <Route
+            path="/admin"
+            element={
+              <PrivateRoute>
+                <AdminDashboard />
+              </PrivateRoute>
+            }
+          />
+        </Routes>
+      </Box>
     </Box>
   );
 }
