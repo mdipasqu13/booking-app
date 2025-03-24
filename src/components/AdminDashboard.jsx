@@ -9,7 +9,6 @@ import {
 } from "firebase/firestore";
 import {
   Box,
-  Flex,
   Heading,
   Table,
   Thead,
@@ -26,6 +25,7 @@ import {
   Text,
   useToast,
   useColorModeValue,
+  TableContainer,
 } from "@chakra-ui/react";
 import { format, parseISO } from "date-fns";
 
@@ -36,10 +36,9 @@ export default function AdminDashboard() {
   const [selectedTime, setSelectedTime] = useState("");
   const toast = useToast();
 
-  const bg = useColorModeValue("white", "gray.800");
-  const text = useColorModeValue("gray.800", "gray.100");
-  const border = useColorModeValue("gray.200", "gray.600");
-  const pageBg = useColorModeValue("gray.50", "gray.900");
+  const bgColor = useColorModeValue("white", "gray.800");
+  const textColor = useColorModeValue("gray.800", "gray.100");
+  const borderColor = useColorModeValue("gray.200", "gray.600");
 
   useEffect(() => {
     fetchAppointments();
@@ -53,13 +52,11 @@ export default function AdminDashboard() {
         id: doc.id,
         ...doc.data(),
       }));
-
       bookings.sort((a, b) => {
         const dateA = parseISO(a.date);
         const dateB = parseISO(b.date);
         return dateA - dateB || a.time.localeCompare(b.time);
       });
-
       setAppointments(bookings);
     } catch (error) {
       console.error("Error fetching appointments:", error);
@@ -82,7 +79,7 @@ export default function AdminDashboard() {
   const handleDelete = async (id) => {
     try {
       await deleteDoc(doc(db, "bookings", id));
-      setAppointments((prev) => prev.filter((appointment) => appointment.id !== id));
+      setAppointments(appointments.filter((appointment) => appointment.id !== id));
       toast({
         title: "Appointment deleted.",
         status: "error",
@@ -131,7 +128,7 @@ export default function AdminDashboard() {
   const handleUnblockTime = async (id) => {
     try {
       await deleteDoc(doc(db, "blocked_times", id));
-      setBlockedTimes((prev) => prev.filter((block) => block.id !== id));
+      setBlockedTimes(blockedTimes.filter((block) => block.id !== id));
 
       toast({
         title: "Time slot unblocked!",
@@ -146,149 +143,119 @@ export default function AdminDashboard() {
   };
 
   return (
-    <Flex
-      direction="column"
-      minH="100vh"
-      bg={pageBg}
-      px={[4, 6]}
-      py={[6, 8]}
+    <Box
+      maxW="1100px"
+      mx="auto"
+      mt={10}
+      p={6}
+      borderWidth="1px"
+      borderRadius="lg"
+      boxShadow="lg"
+      bg={bgColor}
+      color={textColor}
+      borderColor={borderColor}
+      overflow="hidden"
     >
-      <Box
-        maxW="1100px"
-        mx="auto"
-        p={6}
-        borderWidth="1px"
-        borderRadius="lg"
-        boxShadow="lg"
-        bg={bg}
-        borderColor={border}
-        color={text}
-        w="100%"
-      >
-        <Heading size="lg" mb={4} textAlign="center">
-          Admin Dashboard
-        </Heading>
+      <Heading size="lg" mb={4} textAlign="center">
+        Admin Dashboard
+      </Heading>
 
-        {/* Block Time Slot Form */}
-        <VStack spacing={4} align="stretch" mb={6}>
-          <Heading size="md">Block a Timeslot</Heading>
-          <FormControl>
-            <FormLabel>Select a Date</FormLabel>
-            <Input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              bg={bg}
-              color={text}
-              borderColor={border}
-            />
-          </FormControl>
+      {/* Block Time Slot */}
+      <VStack spacing={4} align="stretch" mb={6}>
+        <Heading size="md">Block a Timeslot</Heading>
+        <FormControl>
+          <FormLabel>Select a Date</FormLabel>
+          <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+        </FormControl>
 
-          <FormControl>
-            <FormLabel>Select a Time</FormLabel>
-            <Select
-              value={selectedTime}
-              onChange={(e) => setSelectedTime(e.target.value)}
-              bg={bg}
-              color={text}
-              borderColor={border}
-            >
-              <option value="">Select a time...</option>
-              {[
-                "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
-                "12:00 PM", "12:30 PM", "01:00 PM", "01:30 PM", "02:00 PM", "02:30 PM",
-                "03:00 PM", "03:30 PM", "04:00 PM", "04:30 PM",
-              ].map((time, index) => (
-                <option key={index} value={time}>
-                  {time}
-                </option>
-              ))}
-            </Select>
-          </FormControl>
+        <FormControl>
+          <FormLabel>Select a Time</FormLabel>
+          <Select value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)}>
+            <option value="">Select a time...</option>
+            {[
+              "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+              "12:00 PM", "12:30 PM", "01:00 PM", "01:30 PM", "02:00 PM", "02:30 PM",
+              "03:00 PM", "03:30 PM", "04:00 PM", "04:30 PM",
+            ].map((time, index) => (
+              <option key={index} value={time}>{time}</option>
+            ))}
+          </Select>
+        </FormControl>
 
-          <Button colorScheme="red" onClick={handleBlockTime}>
-            Block Time Slot
-          </Button>
-        </VStack>
+        <Button colorScheme="red" onClick={handleBlockTime}>
+          Block Time Slot
+        </Button>
+      </VStack>
 
-        {/* Blocked Times Table */}
-        <Heading size="md" mb={4}>
-          Blocked Time Slots
-        </Heading>
-        {blockedTimes.length > 0 ? (
-          <Table variant="simple">
-            <Thead>
-              <Tr>
-                <Th>Date</Th>
-                <Th>Time</Th>
-                <Th>Action</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {blockedTimes.map((block) => (
+      {/* Blocked Times Table */}
+      <Heading size="md" mb={4}>Blocked Time Slots</Heading>
+      <TableContainer overflowX="auto" mb={6}>
+        <Table variant="simple" size="sm">
+          <Thead>
+            <Tr>
+              <Th>Date</Th>
+              <Th>Time</Th>
+              <Th>Action</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {blockedTimes.length > 0 ? (
+              blockedTimes.map((block) => (
                 <Tr key={block.id}>
                   <Td>{block.date}</Td>
                   <Td>{block.time}</Td>
                   <Td>
-                    <Button
-                      colorScheme="blue"
-                      size="sm"
-                      onClick={() => handleUnblockTime(block.id)}
-                    >
+                    <Button size="sm" colorScheme="blue" onClick={() => handleUnblockTime(block.id)}>
                       Unblock
                     </Button>
                   </Td>
                 </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        ) : (
-          <Text>No blocked times.</Text>
-        )}
+              ))
+            ) : (
+              <Tr><Td colSpan={3}><Text>No blocked times.</Text></Td></Tr>
+            )}
+          </Tbody>
+        </Table>
+      </TableContainer>
 
-        {/* Appointments Table */}
-        <Heading size="md" mt={6} mb={4}>
-          Booked Appointments
-        </Heading>
-        {appointments.length > 0 ? (
-          <Table variant="simple">
-            <Thead>
-              <Tr>
-                <Th>Name</Th>
-                <Th>Email</Th>
-                <Th>Service</Th>
-                <Th>Date</Th>
-                <Th>Time</Th>
-                <Th>Notes</Th>
-                <Th>Action</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {appointments.map((appointment) => (
+      {/* Booked Appointments Table */}
+      <Heading size="md" mb={4}>Booked Appointments</Heading>
+      <TableContainer overflowX="auto">
+        <Table variant="simple" size="sm">
+          <Thead>
+            <Tr>
+              <Th>Name</Th>
+              <Th>Email</Th>
+              <Th>Service</Th>
+              <Th>Date</Th>
+              <Th>Time</Th>
+              <Th>Notes</Th>
+              <Th>Action</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {appointments.length > 0 ? (
+              appointments.map((appointment) => (
                 <Tr key={appointment.id}>
                   <Td>{appointment.name}</Td>
                   <Td>{appointment.email}</Td>
                   <Td>{appointment.service}</Td>
                   <Td>{appointment.date}</Td>
                   <Td>{appointment.time}</Td>
-                  <Td>{appointment.notes || "No additional notes."}</Td>
+                  <Td>{appointment.notes || "No notes"}</Td>
                   <Td>
-                    <Button
-                      colorScheme="red"
-                      size="sm"
-                      onClick={() => handleDelete(appointment.id)}
-                    >
+                    <Button size="sm" colorScheme="red" onClick={() => handleDelete(appointment.id)}>
                       Delete
                     </Button>
                   </Td>
                 </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        ) : (
-          <Text>No appointments booked.</Text>
-        )}
-      </Box>
-    </Flex>
+              ))
+            ) : (
+              <Tr><Td colSpan={7}><Text>No appointments booked.</Text></Td></Tr>
+            )}
+          </Tbody>
+        </Table>
+      </TableContainer>
+    </Box>
   );
 }
