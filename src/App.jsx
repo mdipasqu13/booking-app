@@ -49,12 +49,8 @@ export default function App() {
           <Flex align="center" justify="space-between">
             {/* Logo */}
             <Link to="/">
-              <Image
-                src="public/BookMeLogo.png"
-                alt="Logo"
-                height="60px"
-                objectFit="contain"
-              />
+              <Image src="/BookMeLogo.png" alt="Logo" height="60px" objectFit="contain" />
+
             </Link>
 
             {/* Hamburger Icon - Mobile Only */}
