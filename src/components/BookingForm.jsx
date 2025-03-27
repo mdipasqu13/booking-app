@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Box,
   Heading,
@@ -60,6 +60,7 @@ export default function BookingForm() {
   const [errors, setErrors] = useState({});
   const [blockedTimes, setBlockedTimes] = useState([]);
   const [bookedTimes, setBookedTimes] = useState([]);
+  const [calendarVisible, setCalendarVisible] = useState(false);
   const toast = useToast();
 
   const bgColor = useColorModeValue("white", "gray.800");
@@ -137,6 +138,7 @@ export default function BookingForm() {
 
       setFormData({ service: "", date: null, time: "", notes: "", name: "", email: "" });
       setErrors({});
+      setCalendarVisible(false);
     } catch (error) {
       console.error("Error booking appointment:", error);
       toast({
@@ -207,8 +209,10 @@ export default function BookingForm() {
   const toggleService = (value) => {
     if (formData.service === value) {
       setFormData({ service: "", date: null, time: "", notes: "", name: "", email: "" });
+      setCalendarVisible(false);
     } else {
       setFormData({ ...formData, service: value, date: null, time: "" });
+      setCalendarVisible(false);
     }
   };
 
@@ -262,17 +266,34 @@ export default function BookingForm() {
                     >
                       <form onSubmit={handleSubmit}>
                         <VStack spacing={4} align="stretch" mt={4}>
+                          {/* Select Date Button */}
                           <FormControl isRequired isInvalid={errors.date}>
                             <FormLabel>Select a Date</FormLabel>
-                            <DatePicker
-                              selected={formData.date}
-                              onChange={(date) => setFormData({ ...formData, date })}
-                              dateFormat="MMMM d, yyyy"
-                              minDate={new Date()}
-                              filterDate={isWeekday}
-                              placeholderText="Click to select a date"
-                              className="chakra-input"
-                            />
+                            <Button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setCalendarVisible(!calendarVisible);
+                              }}
+                              variant="outline"
+                            >
+                              {formData.date
+                                ? format(formData.date, "MMMM d, yyyy")
+                                : "Select a Date"}
+                            </Button>
+                            {calendarVisible && (
+                              <Box mt={2}>
+                                <DatePicker
+                                  selected={formData.date}
+                                  onChange={(date) => {
+                                    setFormData({ ...formData, date });
+                                    setCalendarVisible(false);
+                                  }}
+                                  inline
+                                  filterDate={isWeekday}
+                                  minDate={new Date()}
+                                />
+                              </Box>
+                            )}
                           </FormControl>
 
                           <FormControl isRequired isInvalid={errors.time}>
