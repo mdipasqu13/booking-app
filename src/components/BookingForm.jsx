@@ -11,6 +11,7 @@ import {
   Textarea,
   useToast,
   useColorModeValue,
+  Text,
 } from "@chakra-ui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -26,7 +27,25 @@ import {
 import { collection, addDoc, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import emailjs from "@emailjs/browser";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+
+const services = [
+  {
+    value: "web-design",
+    title: "Web Design",
+    description: "Modern, responsive websites tailored to your brand.",
+  },
+  {
+    value: "seo-consulting",
+    title: "SEO Consulting",
+    description: "Boost your search engine rankings and online visibility.",
+  },
+  {
+    value: "biscuit-service",
+    title: "Mawmaw's Biscuit Service",
+    description: "Professional Biscuit making service, paw-crafted for quality.",
+  },
+];
 
 export default function BookingForm() {
   const [formData, setFormData] = useState({
@@ -74,7 +93,6 @@ export default function BookingForm() {
 
   const validateForm = () => {
     let newErrors = {};
-
     if (!formData.service) newErrors.service = "Please select a service.";
     if (!formData.date) newErrors.date = "Please select a date.";
     if (!formData.time) newErrors.time = "Please select a time.";
@@ -84,11 +102,9 @@ export default function BookingForm() {
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Enter a valid email.";
     }
-
     if (isTimeBlocked(formData.date, formData.time)) {
       newErrors.time = "This time slot is unavailable. Please select another time.";
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -141,29 +157,8 @@ export default function BookingForm() {
       email: formData.email,
     };
 
-    emailjs
-      .send(
-        import.meta.env.VITE_EMAILJS_SERVICE_ID,
-        import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
-        emailParams,
-        import.meta.env.VITE_EMAILJS_PUBLIC_KEY
-      )
-      .then(
-        (response) => console.log("Admin email sent successfully!", response),
-        (error) => console.error("Admin email send failed:", error)
-      );
-
-    emailjs
-      .send(
-        import.meta.env.VITE_EMAILJS_SERVICE_ID,
-        import.meta.env.VITE_EMAILJS_CONFIRMATION_TEMPLATE_ID,
-        emailParams,
-        import.meta.env.VITE_EMAILJS_PUBLIC_KEY
-      )
-      .then(
-        (response) => console.log("Confirmation email sent successfully!", response),
-        (error) => console.error("Confirmation email send failed:", error)
-      );
+    emailjs.send(import.meta.env.VITE_EMAILJS_SERVICE_ID, import.meta.env.VITE_EMAILJS_TEMPLATE_ID, emailParams, import.meta.env.VITE_EMAILJS_PUBLIC_KEY);
+    emailjs.send(import.meta.env.VITE_EMAILJS_SERVICE_ID, import.meta.env.VITE_EMAILJS_CONFIRMATION_TEMPLATE_ID, emailParams, import.meta.env.VITE_EMAILJS_PUBLIC_KEY);
   };
 
   const isWeekday = (date) => {
@@ -175,28 +170,26 @@ export default function BookingForm() {
     let times = [];
     let startTime = setHours(setMinutes(new Date(), 0), 9);
     let endTime = setHours(setMinutes(new Date(), 0), 17);
-
     while (isBefore(startTime, endTime)) {
       times.push(startTime);
       startTime = addMinutes(startTime, 30);
     }
-
     return times;
   };
 
   const isTimeBlocked = (date, time) => {
     if (!date || !time) return false;
-  
     const formattedDate = format(date, "yyyy-MM-dd");
-  
+
     let parsedSelectedTime;
     try {
       parsedSelectedTime = parse(time, "h:mm a", new Date());
     } catch {
       return false;
     }
+
     const normalizedTime = format(parsedSelectedTime, "hh:mm a");
-  
+
     return (
       blockedTimes.some(
         (block) =>
@@ -210,16 +203,19 @@ export default function BookingForm() {
       )
     );
   };
-  
+
+  const toggleService = (value) => {
+    if (formData.service === value) {
+      setFormData({ service: "", date: null, time: "", notes: "", name: "", email: "" });
+    } else {
+      setFormData({ ...formData, service: value, date: null, time: "" });
+    }
+  };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
       <Box
-        maxW={["100%", "500px"]}
+        maxW={["100%", "600px"]}
         mx="auto"
         mt={10}
         p={[4, 6]}
@@ -233,96 +229,120 @@ export default function BookingForm() {
         <Heading size="lg" mb={6} textAlign="center">
           Book an Appointment
         </Heading>
-        <form onSubmit={handleSubmit}>
-          <VStack spacing={4} align="stretch">
-            <FormControl isRequired isInvalid={errors.service}>
-              <FormLabel>Select a Service</FormLabel>
-              <Select
-                name="service"
-                value={formData.service}
-                onChange={(e) =>
-                  setFormData({ ...formData, service: e.target.value })
-                }
-              >
-                <option value="">Select...</option>
-                <option value="web-design">Web Design</option>
-                <option value="seo-consulting">Consulting</option>
-                <option value="custom-software">Mawmaw's Biscuit Service</option>
-              </Select>
-            </FormControl>
 
-            <FormControl isRequired isInvalid={errors.date}>
-              <FormLabel>Select a Date</FormLabel>
-              <DatePicker
-                selected={formData.date}
-                onChange={(date) => setFormData({ ...formData, date })}
-                dateFormat="MMMM d, yyyy"
-                minDate={new Date()}
-                filterDate={isWeekday}
-                placeholderText="Click to select a date"
-                className="chakra-input"
-              />
-            </FormControl>
+        <FormControl isRequired isInvalid={errors.service} mb={4}>
+          <FormLabel>Select a Service</FormLabel>
+          <VStack spacing={3} align="stretch">
+            {services.map((service) => (
+              <Box key={service.value}>
+                <motion.div whileHover={{ scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <Box
+                    p={4}
+                    borderWidth={2}
+                    borderRadius="md"
+                    borderColor={formData.service === service.value ? "blue.400" : "gray.300"}
+                    bg={formData.service === service.value ? "blue.50" : "transparent"}
+                    cursor="pointer"
+                    _hover={{ borderColor: "blue.300" }}
+                    onClick={() => toggleService(service.value)}
+                  >
+                    <Text fontWeight="bold">{service.title}</Text>
+                    <Text fontSize="sm">{service.description}</Text>
+                  </Box>
+                </motion.div>
 
-            <FormControl isRequired isInvalid={errors.time}>
-              <FormLabel>Select a Time</FormLabel>
-              <Select
-                name="time"
-                value={formData.time}
-                onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-              >
-                {generateTimeSlots().map((time, index) => {
-                  const formatted = format(time, "h:mm a");
-                  return !isTimeBlocked(formData.date, formatted) ? (
-                    <option key={index} value={formatted}>
-                      {formatted}
-                    </option>
-                  ) : null;
-                })}
-              </Select>
-            </FormControl>
+                <AnimatePresence>
+                  {formData.service === service.value && (
+                    <motion.div
+                      key="booking-form"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <form onSubmit={handleSubmit}>
+                        <VStack spacing={4} align="stretch" mt={4}>
+                          <FormControl isRequired isInvalid={errors.date}>
+                            <FormLabel>Select a Date</FormLabel>
+                            <DatePicker
+                              selected={formData.date}
+                              onChange={(date) => setFormData({ ...formData, date })}
+                              dateFormat="MMMM d, yyyy"
+                              minDate={new Date()}
+                              filterDate={isWeekday}
+                              placeholderText="Click to select a date"
+                              className="chakra-input"
+                            />
+                          </FormControl>
 
-            <FormControl>
-              <FormLabel>Additional Notes</FormLabel>
-              <Textarea
-                name="notes"
-                value={formData.notes}
-                onChange={(e) =>
-                  setFormData({ ...formData, notes: e.target.value })
-                }
-                placeholder="Any special requests or details?"
-              />
-            </FormControl>
+                          <FormControl isRequired isInvalid={errors.time}>
+                            <FormLabel>Select a Time</FormLabel>
+                            <Select
+                              name="time"
+                              value={formData.time}
+                              onChange={(e) =>
+                                setFormData({ ...formData, time: e.target.value })
+                              }
+                            >
+                              {generateTimeSlots().map((time, index) => {
+                                const formatted = format(time, "h:mm a");
+                                return !isTimeBlocked(formData.date, formatted) ? (
+                                  <option key={index} value={formatted}>
+                                    {formatted}
+                                  </option>
+                                ) : null;
+                              })}
+                            </Select>
+                          </FormControl>
 
-            <FormControl isRequired isInvalid={errors.name}>
-              <FormLabel>Name</FormLabel>
-              <Input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-              />
-            </FormControl>
+                          <FormControl>
+                            <FormLabel>Additional Notes</FormLabel>
+                            <Textarea
+                              name="notes"
+                              value={formData.notes}
+                              onChange={(e) =>
+                                setFormData({ ...formData, notes: e.target.value })
+                              }
+                              placeholder="Any special requests or details?"
+                            />
+                          </FormControl>
 
-            <FormControl isRequired isInvalid={errors.email}>
-              <FormLabel>Email</FormLabel>
-              <Input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-              />
-            </FormControl>
+                          <FormControl isRequired isInvalid={errors.name}>
+                            <FormLabel>Name</FormLabel>
+                            <Input
+                              type="text"
+                              name="name"
+                              value={formData.name}
+                              onChange={(e) =>
+                                setFormData({ ...formData, name: e.target.value })
+                              }
+                            />
+                          </FormControl>
 
-            <Button type="submit" colorScheme="blue" width="full">
-              Book Appointment
-            </Button>
+                          <FormControl isRequired isInvalid={errors.email}>
+                            <FormLabel>Email</FormLabel>
+                            <Input
+                              type="email"
+                              name="email"
+                              value={formData.email}
+                              onChange={(e) =>
+                                setFormData({ ...formData, email: e.target.value })
+                              }
+                            />
+                          </FormControl>
+
+                          <Button type="submit" colorScheme="blue" width="full">
+                            Book Appointment
+                          </Button>
+                        </VStack>
+                      </form>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </Box>
+            ))}
           </VStack>
-        </form>
+        </FormControl>
       </Box>
     </motion.div>
   );
