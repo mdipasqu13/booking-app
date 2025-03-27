@@ -240,14 +240,21 @@ export default function BookingForm() {
             {services.map((service) => (
               <Box key={service.value}>
                 <motion.div whileHover={{ scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
-                  <Box
+                <Box
                     p={4}
                     borderWidth={2}
                     borderRadius="md"
-                    borderColor={formData.service === service.value ? "blue.400" : "gray.300"}
-                    bg={formData.service === service.value ? "blue.50" : "transparent"}
+                    borderColor={formData.service === service.value ? "blue.400" : useColorModeValue("gray.300", "gray.600")}
+                    bg={
+                        formData.service === service.value
+                        ? useColorModeValue("blue.50", "blue.900")
+                        : useColorModeValue("white", "gray.700")
+                    }
                     cursor="pointer"
-                    _hover={{ borderColor: "blue.300" }}
+                    _hover={{
+                        borderColor: useColorModeValue("blue.300", "blue.500"),
+                        bg: useColorModeValue("gray.50", "gray.600"),
+                    }}
                     onClick={() => toggleService(service.value)}
                   >
                     <Text fontWeight="bold">{service.title}</Text>
