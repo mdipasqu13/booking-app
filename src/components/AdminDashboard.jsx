@@ -28,21 +28,36 @@ import {
   TableContainer,
 } from "@chakra-ui/react";
 import { format, parseISO } from "date-fns";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 export default function AdminDashboard() {
   const [appointments, setAppointments] = useState([]);
   const [blockedTimes, setBlockedTimes] = useState([]);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const toast = useToast();
+
+  const auth = getAuth();
+  const adminUID = "a5H7HmLJrBRKQJr3rBaIlvEi9Zt1"; // ✅ your admin Firebase UID
 
   const bgColor = useColorModeValue("white", "gray.800");
   const textColor = useColorModeValue("gray.800", "gray.100");
   const borderColor = useColorModeValue("gray.200", "gray.600");
 
   useEffect(() => {
-    fetchAppointments();
-    fetchBlockedTimes();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user?.uid === adminUID) {
+        setIsAuthorized(true);
+        fetchAppointments();
+        fetchBlockedTimes();
+      } else {
+        setIsAuthorized(false);
+        console.warn("Unauthorized user or not signed in.");
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const fetchAppointments = async () => {
@@ -79,7 +94,7 @@ export default function AdminDashboard() {
   const handleDelete = async (id) => {
     try {
       await deleteDoc(doc(db, "bookings", id));
-      setAppointments(appointments.filter((appointment) => appointment.id !== id));
+      setAppointments((prev) => prev.filter((appointment) => appointment.id !== id));
       toast({
         title: "Appointment deleted.",
         status: "error",
@@ -128,7 +143,7 @@ export default function AdminDashboard() {
   const handleUnblockTime = async (id) => {
     try {
       await deleteDoc(doc(db, "blocked_times", id));
-      setBlockedTimes(blockedTimes.filter((block) => block.id !== id));
+      setBlockedTimes((prev) => prev.filter((block) => block.id !== id));
 
       toast({
         title: "Time slot unblocked!",
@@ -141,6 +156,16 @@ export default function AdminDashboard() {
       console.error("Error unblocking time slot:", error);
     }
   };
+
+  if (!isAuthorized) {
+    return (
+      <Box textAlign="center" py={20}>
+        <Heading size="md">
+          You must be signed in as an admin to view this page.
+        </Heading>
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -165,19 +190,29 @@ export default function AdminDashboard() {
         <Heading size="md">Block a Timeslot</Heading>
         <FormControl>
           <FormLabel>Select a Date</FormLabel>
-          <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+          <Input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+          />
         </FormControl>
 
         <FormControl>
           <FormLabel>Select a Time</FormLabel>
-          <Select value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)}>
+          <Select
+            value={selectedTime}
+            onChange={(e) => setSelectedTime(e.target.value)}
+          >
             <option value="">Select a time...</option>
             {[
-              "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
-              "12:00 PM", "12:30 PM", "01:00 PM", "01:30 PM", "02:00 PM", "02:30 PM",
-              "03:00 PM", "03:30 PM", "04:00 PM", "04:30 PM",
+              "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM",
+              "11:30 AM", "12:00 PM", "12:30 PM", "01:00 PM", "01:30 PM",
+              "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM", "04:00 PM",
+              "04:30 PM",
             ].map((time, index) => (
-              <option key={index} value={time}>{time}</option>
+              <option key={index} value={time}>
+                {time}
+              </option>
             ))}
           </Select>
         </FormControl>
@@ -188,7 +223,9 @@ export default function AdminDashboard() {
       </VStack>
 
       {/* Blocked Times Table */}
-      <Heading size="md" mb={4}>Blocked Time Slots</Heading>
+      <Heading size="md" mb={4}>
+        Blocked Time Slots
+      </Heading>
       <TableContainer overflowX="auto" mb={6}>
         <Table variant="simple" size="sm">
           <Thead>
@@ -205,21 +242,31 @@ export default function AdminDashboard() {
                   <Td>{block.date}</Td>
                   <Td>{block.time}</Td>
                   <Td>
-                    <Button size="sm" colorScheme="blue" onClick={() => handleUnblockTime(block.id)}>
+                    <Button
+                      size="sm"
+                      colorScheme="blue"
+                      onClick={() => handleUnblockTime(block.id)}
+                    >
                       Unblock
                     </Button>
                   </Td>
                 </Tr>
               ))
             ) : (
-              <Tr><Td colSpan={3}><Text>No blocked times.</Text></Td></Tr>
+              <Tr>
+                <Td colSpan={3}>
+                  <Text>No blocked times.</Text>
+                </Td>
+              </Tr>
             )}
           </Tbody>
         </Table>
       </TableContainer>
 
       {/* Booked Appointments Table */}
-      <Heading size="md" mb={4}>Booked Appointments</Heading>
+      <Heading size="md" mb={4}>
+        Booked Appointments
+      </Heading>
       <TableContainer overflowX="auto">
         <Table variant="simple" size="sm">
           <Thead>
@@ -244,14 +291,22 @@ export default function AdminDashboard() {
                   <Td>{appointment.time}</Td>
                   <Td>{appointment.notes || "No notes"}</Td>
                   <Td>
-                    <Button size="sm" colorScheme="red" onClick={() => handleDelete(appointment.id)}>
+                    <Button
+                      size="sm"
+                      colorScheme="red"
+                      onClick={() => handleDelete(appointment.id)}
+                    >
                       Delete
                     </Button>
                   </Td>
                 </Tr>
               ))
             ) : (
-              <Tr><Td colSpan={7}><Text>No appointments booked.</Text></Td></Tr>
+              <Tr>
+                <Td colSpan={7}>
+                  <Text>No appointments booked.</Text>
+                </Td>
+              </Tr>
             )}
           </Tbody>
         </Table>
